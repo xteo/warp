@@ -1,0 +1,83 @@
+---
+description: C++/CUDA native code guidelines for Warp
+globs: ["warp/native/**/*.cpp", "warp/native/**/*.cu", "warp/native/**/*.h"]
+alwaysApply: true
+---
+
+# Warp Native Code Rules
+
+## Overview
+
+The `warp/native/` directory contains C++/CUDA code that implements Warp's core runtime.
+Changes here require rebuilding the native library.
+
+## Building Native Code
+
+After modifying native code, rebuild:
+
+```bash
+uv run build_lib.py
+```
+
+## Code Formatting
+
+C++/CUDA code follows `.clang-format` configuration. Format before committing.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `warp.h/cpp/cu` | Core runtime implementation |
+| `array.h` | Array data structure |
+| `builtins.h` | Built-in kernel functions |
+| `vec.h` | Vector types (vec2, vec3, vec4) |
+| `mat.h` | Matrix types (mat22, mat33, mat44) |
+| `quat.h` | Quaternion operations |
+| `tile.h` | Tile-based operations |
+| `mesh.h/cpp/cu` | Mesh processing |
+| `bvh.h/cpp/cu` | Bounding volume hierarchy |
+| `volume.h/cu` | Volume processing |
+| `hash_grid.h/cu` | Spatial hashing |
+
+## Adding New Built-ins
+
+1. Declare in `warp/native/builtins.h`
+2. Implement in appropriate `.cpp`/`.cu` file
+3. Register in `warp/_src/builtins.py`
+4. Rebuild native libs: `uv run build_lib.py`
+5. Regenerate stubs: `uv run build_docs.py`
+
+## CUDA Kernels
+
+```cpp
+// Use CUDA_CALLABLE for device functions
+CUDA_CALLABLE inline float my_device_func(float x) {
+    return x * x;
+}
+
+// Use WP_API for exported functions
+WP_API void my_exported_func(...) {
+    // Implementation
+}
+```
+
+## Memory Management
+
+- Use RAII patterns for CUDA resources
+- Prefer `cudaMallocAsync`/`cudaFreeAsync` for stream-ordered allocation
+- Always check CUDA error codes
+
+## Thread Safety
+
+- Native runtime may be called from multiple Python threads
+- Use appropriate synchronization for shared state
+- Document thread safety guarantees in comments
+
+## Platform Considerations
+
+Code must compile on:
+- Linux (x86_64, aarch64)
+- Windows (x86_64)
+- macOS (x86_64, arm64) - CPU only
+
+Use appropriate `#ifdef` guards for platform-specific code.

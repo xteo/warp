@@ -1,0 +1,143 @@
+---
+description: Core NVIDIA Warp patterns for kernel development and testing
+globs: ["**/*.py"]
+alwaysApply: false
+---
+
+# Warp Core Development Rules
+
+## Kernel Development
+
+### Kernel Structure
+- Use `@wp.kernel` decorator for parallel entry points
+- Use `@wp.func` for helper functions callable from kernels
+- Get thread index with `wp.tid()`
+- Kernels cannot return values; write to output arrays instead
+
+```python
+import warp as wp
+
+@wp.func
+def helper(x: float) -> float:
+    return x * x
+
+@wp.kernel
+def my_kernel(input: wp.array(dtype=wp.float32),
+              output: wp.array(dtype=wp.float32)):
+    i = wp.tid()
+    output[i] = helper(input[i])
+
+# Launch with explicit dimensions
+wp.launch(my_kernel, dim=n, inputs=[in_arr, out_arr])
+```
+
+### Type Safety
+- Always specify dtype: `wp.array(dtype=wp.float32)`
+- Use Warp types in kernels: `wp.float32`, `wp.vec3`, `wp.mat33`
+- Python objects (list, dict, class instances) cannot be used inside kernels
+- Use `wp.static()` for compile-time constants
+
+### Common Pitfalls to Avoid
+- Don't use Python list/dict inside kernels
+- Don't use Python `range()` - use `wp.range()` instead
+- Don't `return` from kernels - write to output arrays
+- Don't call `wp.launch()` inside kernels
+- Don't use f-strings or string operations in kernels
+
+## Testing Rules
+
+### Framework
+- **Always use unittest, NEVER pytest**
+- Test files should be named `test_<module>.py`
+- Add new test files to `warp/tests/unittest_suites.py`
+
+### Running Tests
+```bash
+# Single test file
+uv run warp/tests/test_<name>.py
+
+# All tests
+uv run --extra dev -m warp.tests -s autodetect
+```
+
+### Critical Rule
+**NEVER call `wp.clear_kernel_cache()` outside of `if __name__ == "__main__":` blocks**
+
+```python
+# WRONG - will break parallel test runners
+wp.clear_kernel_cache()
+class TestModule(unittest.TestCase):
+    ...
+
+# CORRECT
+class TestModule(unittest.TestCase):
+    ...
+
+if __name__ == "__main__":
+    wp.clear_kernel_cache()  # OK here
+    unittest.main()
+```
+
+## Python Execution
+
+Always use `uv run` for Python execution:
+```bash
+uv run script.py
+uv run -m warp.tests
+uv run --extra dev -m warp.tests
+```
+
+Never use bare `python` or `python3` commands.
+
+## Import Patterns
+
+```python
+# Public API usage (in user code, examples, tests)
+import warp as wp
+
+# Internal implementation (in warp/_src/ files)
+from warp._src.context import Runtime
+from warp._src.types import array
+```
+
+Never import from `warp._src` in public-facing code.
+
+## Memory Management
+
+- Prefer reusing arrays over reallocating
+- Use `wp.synchronize()` before reading results on CPU
+- Use `array.numpy()` to get NumPy view (includes implicit sync)
+- Specify device explicitly: `wp.array(..., device="cuda:0")`
+
+## Code Formatting
+
+Run before committing:
+```bash
+uvx pre-commit run -a
+```
+
+## Docstring Style
+
+Use Google-style docstrings:
+```python
+def function(param1: int, param2: str) -> bool:
+    """Short description.
+
+    Longer description if needed.
+
+    Args:
+        param1: Description of param1.
+        param2: Description of param2.
+
+    Returns:
+        Description of return value.
+    """
+```
+
+## Key File Locations
+
+- Kernel codegen: `warp/_src/codegen.py`
+- Built-in functions: `warp/_src/builtins.py`
+- Runtime context: `warp/_src/context.py`
+- Type definitions: `warp/_src/types.py`
+- Test utilities: `warp/tests/unittest_utils.py`
