@@ -1,3 +1,8 @@
+---
+name: warp
+description: NVIDIA Warp onboarding skill - high-performance Python framework for GPU kernels, differentiable simulation, and spatial computing. Use when working with Warp for: (1) Installing and setting up Warp, (2) Writing custom kernels with @wp.kernel, (3) Learning core concepts like arrays, launches, and thread indexing, (4) Working with mesh, volume, and BVH spatial primitives, (5) Building differentiable simulations with wp.Tape, (6) Exploring examples in core, FEM, optimization, and interop domains.
+---
+
 # Warp Onboarding Skill
 
 This skill is a practical entry point for learning NVIDIA Warp in this repository.
