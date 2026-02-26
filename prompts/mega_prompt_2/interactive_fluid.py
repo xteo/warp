@@ -652,30 +652,21 @@ def run_interactive(num_particles=10000, width=900, height=900):
         window.switch_to()
         window.clear()
 
-        # Draw particles as GL points
-        from pyglet import gl  # noqa: PLC0415
+        # Rasterize particles into a pixel buffer and blit (pyglet 2.x compatible)
+        framebuf = np.zeros((height, width, 3), dtype=np.uint8)
+        framebuf[:, :] = (15, 15, 25)  # dark background
 
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glPointSize(3.0)
+        # Convert to integer pixel coords and clip
+        ix = np.clip(px.astype(np.int32), 0, width - 1)
+        iy = np.clip(py.astype(np.int32), 0, height - 1)
 
-        n = sim.num_particles
-        vertices = np.empty(n * 2, dtype=np.float32)
-        vertices[0::2] = px
-        vertices[1::2] = py
+        # Draw particles (later particles overwrite earlier — fine for visualization)
+        framebuf[iy, ix, 0] = cr
+        framebuf[iy, ix, 1] = cg
+        framebuf[iy, ix, 2] = cb
 
-        color_data = np.empty(n * 4, dtype=np.uint8)
-        color_data[0::4] = cr
-        color_data[1::4] = cg
-        color_data[2::4] = cb
-        color_data[3::4] = 200
-
-        vlist = pyglet.graphics.vertex_list(
-            n,
-            ("v2f", vertices.tolist()),
-            ("c4B", color_data.tolist()),
-        )
-        vlist.draw(gl.GL_POINTS)
+        image = pyglet.image.ImageData(width, height, "RGB", framebuf.tobytes(), pitch=width * 3)
+        image.blit(0, 0)
 
         # FPS
         frame_count += 1
