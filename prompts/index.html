@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA Warp MegaPrompts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --nvidia-green: #76B900;
+  --nvidia-green-dark: #5a8f00;
+  --nvidia-green-light: #8dd600;
+  --bg-primary: #0d0d0d;
+  --bg-secondary: #141414;
+  --bg-card: #1a1a1a;
+  --bg-card-hover: #1f1f1f;
+  --bg-code: #111111;
+  --text-primary: #e8e8e8;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --border-color: #2a2a2a;
+  --border-accent: #333333;
+  --sidebar-width: 260px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 32px;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hero Section */
+.hero {
+  position: relative;
+  padding: 80px 40px 60px;
+  text-align: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, var(--nvidia-green) 50%, transparent 100%);
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse at center, rgba(118, 185, 0, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--nvidia-green);
+  margin-bottom: 20px;
+  padding: 6px 16px;
+  border: 1px solid rgba(118, 185, 0, 0.3);
+  border-radius: 20px;
+  background: rgba(118, 185, 0, 0.06);
+}
+
+.hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero h1 span {
+  background: linear-gradient(135deg, var(--nvidia-green) 0%, var(--nvidia-green-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: var(--text-secondary);
+  max-width: 720px;
+  margin: 0 auto 24px;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.hero-description {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Layout */
+.layout {
+  display: flex;
+  min-height: calc(100vh - 300px);
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  padding: 32px 0;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.sidebar-nav {
+  list-style: none;
+}
+
+.sidebar-nav li {
+  margin-bottom: 2px;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  border-left: 2px solid transparent;
+}
+
+.sidebar-nav a:hover {
+  color: var(--text-primary);
+  background: rgba(118, 185, 0, 0.04);
+}
+
+.sidebar-nav a.active {
+  color: var(--nvidia-green);
+  background: rgba(118, 185, 0, 0.08);
+  border-left-color: var(--nvidia-green);
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav a.active .nav-number {
+  background: rgba(118, 185, 0, 0.15);
+  border-color: rgba(118, 185, 0, 0.3);
+  color: var(--nvidia-green);
+}
+
+.sidebar-nav .nav-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 40px 48px 80px;
+  max-width: 960px;
+}
+
+/* MegaPrompt Sections */
+.megaprompt-section {
+  margin-bottom: 72px;
+}
+
+.megaprompt-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-header {
+  margin-bottom: 28px;
+}
+
+.section-number {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--nvidia-green);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.section-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.badge-difficulty-medium {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.badge-difficulty-medium-hard {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+.badge-difficulty-hard {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.badge-lines {
+  background: rgba(118, 185, 0, 0.1);
+  color: var(--nvidia-green);
+  border: 1px solid rgba(118, 185, 0, 0.2);
+}
+
+/* Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--border-accent);
+}
+
+.card-image-wrapper {
+  position: relative;
+  background: var(--bg-code);
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.card-image-wrapper img {
+  width: 100%;
+  display: block;
+  object-fit: contain;
+  max-height: 400px;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+.card-description {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+/* Sub-sections within cards */
+.card-subsection {
+  margin-bottom: 20px;
+}
+
+.card-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.card-subsection-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Features list */
+.features-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+
+.features-list li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding-left: 16px;
+  position: relative;
+}
+
+.features-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--nvidia-green);
+}
+
+/* API tags */
+.api-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.api-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  font-weight: 500;
+  background: rgba(118, 185, 0, 0.08);
+  color: var(--nvidia-green);
+  border: 1px solid rgba(118, 185, 0, 0.15);
+}
+
+/* Code blocks */
+.code-block {
+  position: relative;
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.code-block-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.code-block-copy {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.code-block-copy:hover {
+  border-color: var(--nvidia-green);
+  color: var(--nvidia-green);
+}
+
+.code-block pre {
+  padding: 14px;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c9d1d9;
+}
+
+.code-block pre .cmd {
+  color: var(--nvidia-green);
+}
+
+.code-block pre .flag {
+  color: #79c0ff;
+}
+
+.code-block pre .str {
+  color: #a5d6ff;
+}
+
+.code-block pre .comment {
+  color: #555;
+}
+
+/* Controls Table */
+.controls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.controls-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.controls-table td {
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.controls-table td:first-child {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  color: var(--text-primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* GIF container */
+.gif-container {
+  margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.gif-container img {
+  width: 100%;
+  display: block;
+}
+
+.gif-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  background: var(--bg-code);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 40px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.footer a {
+  color: var(--nvidia-green);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sidebar {
+    display: none;
+  }
+
+  .main-content {
+    padding: 32px 24px 60px;
+  }
+
+  .hero {
+    padding: 60px 24px 40px;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+  }
+
+  .hero-subtitle {
+    font-size: 16px;
+  }
+
+  .features-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero h1 {
+    font-size: 28px;
+  }
+
+  .section-title {
+    font-size: 22px;
+  }
+
+  .main-content {
+    padding: 24px 16px 40px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero Section -->
+<header class="hero">
+  <div class="hero-label">NVIDIA Warp + Claude Code</div>
+  <h1>Warp <span>MegaPrompts</span></h1>
+  <p class="hero-subtitle">
+    Comprehensive prompts that leverage the Warp skill to generate complete GPU-accelerated
+    simulation and graphics applications using Claude Code &mdash; from ray marching to fluid dynamics.
+  </p>
+  <p class="hero-description">
+    Each MegaPrompt is a self-contained specification that an AI agent can execute end-to-end,
+    producing production-quality GPU simulation code powered by NVIDIA Warp's JIT-compiled Python kernels.
+  </p>
+</header>
+
+<!-- Layout: Sidebar + Main -->
+<div class="layout">
+
+  <!-- Sidebar Navigation -->
+  <nav class="sidebar">
+    <div class="sidebar-header">MegaPrompts</div>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="#mp1" data-target="mp1">
+          <span class="nav-number">1</span>
+          <span class="nav-title">Interactive GPU Ray Marcher</span>
+        </a>
+      </li>
+      <li>
+        <a href="#mp2" data-target="mp2">
+          <span class="nav-number">2</span>
+          <span class="nav-title">Real-time GPU Particle Fluid</span>
+        </a>
+      </li>
+      <li>
+        <a href="#mp3" data-target="mp3">
+          <span class="nav-number">3</span>
+          <span class="nav-title">Differentiable Scene Optimizer</span>
+        </a>
+      </li>
+      <li>
+        <a href="#mp4" data-target="mp4">
+          <span class="nav-number">4</span>
+          <span class="nav-title">GPU N-body Galaxy Simulator</span>
+        </a>
+      </li>
+      <li>
+        <a href="#mp5" data-target="mp5">
+          <span class="nav-number">5</span>
+          <span class="nav-title">Lattice Boltzmann CFD Solver</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- MegaPrompt 1 -->
+    <section id="mp1" class="megaprompt-section">
+      <div class="section-header">
+        <div class="section-number">MegaPrompt 01</div>
+        <h2 class="section-title">Interactive GPU Ray Marcher</h2>
+        <div class="section-meta">
+          <span class="badge badge-difficulty-medium">Medium</span>
+          <span class="badge badge-lines">~250 lines</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-image-wrapper">
+          <img src="mega_prompt_1/mega_prompt_1.png" alt="Interactive GPU Ray Marcher screenshot showing SDF scene with reflective spheres, torus, and rounded box" loading="lazy">
+        </div>
+        <div class="card-body">
+          <p class="card-description">
+            A real-time SDF scene explorer rendered entirely on GPU. Navigate a 3D scene of procedural
+            objects &mdash; reflective silver, matte red, and emissive gold spheres, a metallic blue torus,
+            and a green rounded box &mdash; using FPS-style keyboard controls. The ray marching kernel computes
+            Phong lighting, soft shadows, ambient occlusion, and smooth-min blending in real time.
+          </p>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Key Features</div>
+            <ul class="features-list">
+              <li>SDF ray marching (128 steps)</li>
+              <li>Phong lighting + soft shadows</li>
+              <li>Smooth-min organic blending</li>
+              <li>Ambient occlusion</li>
+              <li>FPS camera (WASD + arrows)</li>
+              <li>Checkerboard ground plane</li>
+              <li>Headless PNG rendering</li>
+              <li>30+ FPS at 1024x512</li>
+            </ul>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">How to Run</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-label">Interactive</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">"pyglet>=2.0"</span> <span class="flag">--with</span> <span class="str">matplotlib</span> python prompts/mega_prompt_1/interactive_raymarch.py</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">Headless (single high-res PNG)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> python prompts/mega_prompt_1/interactive_raymarch.py <span class="flag">--headless</span></pre>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Warp APIs Used</div>
+            <div class="api-tags">
+              <span class="api-tag">@wp.kernel</span>
+              <span class="api-tag">@wp.func</span>
+              <span class="api-tag">wp.tid()</span>
+              <span class="api-tag">wp.vec3</span>
+              <span class="api-tag">wp.launch (2D)</span>
+              <span class="api-tag">OpenGLRenderer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MegaPrompt 2 -->
+    <section id="mp2" class="megaprompt-section">
+      <div class="section-header">
+        <div class="section-number">MegaPrompt 02</div>
+        <h2 class="section-title">Real-time GPU Particle Fluid</h2>
+        <div class="section-meta">
+          <span class="badge badge-difficulty-medium-hard">Medium-Hard</span>
+          <span class="badge badge-lines">~350 lines</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-image-wrapper">
+          <img src="mega_prompt_2/interactive_fluid.png" alt="Real-time SPH particle fluid simulation showing dam-break with velocity coloring" loading="lazy">
+        </div>
+        <div class="card-body">
+          <p class="card-description">
+            An interactive 2D SPH fluid simulator with mouse-driven forces. Simulates 10,000 particles
+            (adjustable 2k-30k at runtime) using Smoothed Particle Hydrodynamics with a cubic spline kernel.
+            Uses <code>wp.HashGrid</code> for O(n) neighbor queries. Click to attract or repel particles,
+            with velocity-based coloring from blue (slow) to red (fast).
+          </p>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Key Features</div>
+            <ul class="features-list">
+              <li>SPH with cubic spline kernel</li>
+              <li>wp.HashGrid neighbor queries</li>
+              <li>Mouse attract/repel forces</li>
+              <li>Dam-break initial config</li>
+              <li>Runtime particle count adjust</li>
+              <li>Velocity-based particle coloring</li>
+              <li>Weakly compressible EOS</li>
+              <li>Viscosity + gravity</li>
+            </ul>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">How to Run</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-label">Interactive</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">"pyglet>=2.0"</span> <span class="flag">--with</span> <span class="str">matplotlib</span> python prompts/mega_prompt_2/interactive_fluid.py</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">Headless (200 frames)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> python prompts/mega_prompt_2/interactive_fluid.py <span class="flag">--headless</span> <span class="flag">--num-frames</span> 200</pre>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Controls</div>
+            <table class="controls-table">
+              <thead>
+                <tr><th>Input</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Left click + drag</td><td>Attract particles toward mouse</td></tr>
+                <tr><td>Right click + drag</td><td>Repel particles from mouse</td></tr>
+                <tr><td>Space</td><td>Pause / resume</td></tr>
+                <tr><td>R</td><td>Reset simulation</td></tr>
+                <tr><td>+/- keys</td><td>Adjust particle count (+/- 2000)</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Warp APIs Used</div>
+            <div class="api-tags">
+              <span class="api-tag">@wp.kernel</span>
+              <span class="api-tag">wp.HashGrid</span>
+              <span class="api-tag">@wp.func</span>
+              <span class="api-tag">wp.vec3</span>
+              <span class="api-tag">wp.launch</span>
+              <span class="api-tag">OpenGLRenderer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MegaPrompt 3 -->
+    <section id="mp3" class="megaprompt-section">
+      <div class="section-header">
+        <div class="section-number">MegaPrompt 03</div>
+        <h2 class="section-title">Differentiable Scene Optimizer</h2>
+        <div class="section-meta">
+          <span class="badge badge-difficulty-medium">Medium</span>
+          <span class="badge badge-lines">~200 lines</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-image-wrapper">
+          <img src="mega_prompt_3/mega_prompt_3.png" alt="Differentiable scene optimization showing target image, initial random state, and optimized result" loading="lazy">
+        </div>
+        <div class="card-body">
+          <p class="card-description">
+            Optimizes 3D sphere parameters to match a target image using differentiable rendering and
+            automatic differentiation. A soft renderer computes per-pixel color from sphere parameters
+            using front-to-back alpha compositing with sigmoid-based opacity. <code>wp.Tape</code> records
+            the forward pass and backpropagates gradients, while <code>warp.optim.Adam</code> updates
+            positions, radii, and colors &mdash; achieving 56x loss reduction in 150 steps.
+          </p>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Key Features</div>
+            <ul class="features-list">
+              <li>Differentiable soft renderer</li>
+              <li>wp.Tape auto-differentiation</li>
+              <li>Adam optimizer (warp.optim)</li>
+              <li>Front-to-back alpha compositing</li>
+              <li>20 spheres optimized to target</li>
+              <li>Progress animation GIF output</li>
+              <li>Loss curve visualization</li>
+              <li>Headless-safe (no display)</li>
+            </ul>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">How to Run</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-label">Default (500 steps)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_3/diffscene.py</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">Custom settings</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_3/diffscene.py <span class="flag">--steps</span> 300 <span class="flag">--num-spheres</span> 30 <span class="flag">--lr</span> 0.005</pre>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Optimization Animation</div>
+            <div class="gif-container">
+              <img src="mega_prompt_3/optimization.gif" alt="Optimization process animation showing spheres converging to target image" loading="lazy">
+              <div class="gif-label">optimization.gif &mdash; Spheres converging from random initialization to target</div>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Warp APIs Used</div>
+            <div class="api-tags">
+              <span class="api-tag">wp.Tape</span>
+              <span class="api-tag">warp.optim.Adam</span>
+              <span class="api-tag">@wp.kernel</span>
+              <span class="api-tag">wp.atomic_add</span>
+              <span class="api-tag">requires_grad=True</span>
+              <span class="api-tag">tape.backward()</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MegaPrompt 4 -->
+    <section id="mp4" class="megaprompt-section">
+      <div class="section-header">
+        <div class="section-number">MegaPrompt 04</div>
+        <h2 class="section-title">GPU N-body Galaxy Simulator</h2>
+        <div class="section-meta">
+          <span class="badge badge-difficulty-medium">Medium</span>
+          <span class="badge badge-lines">~300 lines</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-image-wrapper">
+          <img src="mega_prompt_4/mega_prompt_4.png" alt="N-body galaxy simulation showing spiral galaxy with velocity-mapped particle colors" loading="lazy">
+        </div>
+        <div class="card-body">
+          <p class="card-description">
+            A gravitational N-body galaxy simulator with 10,240 bodies. Uses tile-based force computation
+            via <code>wp.tile_load</code> for ~2x speedup over naive O(N&sup2;) and CUDA graph capture
+            (<code>wp.ScopedCapture</code>) to eliminate kernel launch overhead. Features leapfrog integration
+            with softening, motion trails via circular buffer, and three presets: spiral galaxy, galaxy
+            collision, and random cluster.
+          </p>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Key Features</div>
+            <ul class="features-list">
+              <li>Tile-based force (64-particle tiles)</li>
+              <li>CUDA graph capture</li>
+              <li>Leapfrog integration</li>
+              <li>Motion trails (circular buffer)</li>
+              <li>3 presets (spiral/collision/cluster)</li>
+              <li>Velocity-mapped coloring</li>
+              <li>Benchmark: tile vs naive</li>
+              <li>Animated GIF output</li>
+            </ul>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">How to Run</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-label">Spiral Galaxy (200 frames)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_4/galaxy_sim.py <span class="flag">--preset</span> spiral <span class="flag">--num-frames</span> 200</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">Galaxy Collision (300 frames)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_4/galaxy_sim.py <span class="flag">--preset</span> collision <span class="flag">--num-frames</span> 300</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">With benchmark (tile vs naive)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_4/galaxy_sim.py <span class="flag">--preset</span> spiral <span class="flag">--benchmark</span></pre>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Galaxy Collision Animation</div>
+            <div class="gif-container">
+              <img src="mega_prompt_4/galaxy_collision.gif" alt="Two spiral galaxies colliding and merging under mutual gravity" loading="lazy">
+              <div class="gif-label">galaxy_collision.gif &mdash; Two galaxies merging under mutual gravity</div>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Warp APIs Used</div>
+            <div class="api-tags">
+              <span class="api-tag">wp.launch_tiled</span>
+              <span class="api-tag">wp.tile_load</span>
+              <span class="api-tag">wp.ScopedCapture</span>
+              <span class="api-tag">wp.capture_launch</span>
+              <span class="api-tag">@wp.kernel</span>
+              <span class="api-tag">wp.vec3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MegaPrompt 5 -->
+    <section id="mp5" class="megaprompt-section">
+      <div class="section-header">
+        <div class="section-number">MegaPrompt 05</div>
+        <h2 class="section-title">Mini 2D Lattice Boltzmann CFD Solver</h2>
+        <div class="section-meta">
+          <span class="badge badge-difficulty-hard">Hard</span>
+          <span class="badge badge-lines">~400 lines</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-image-wrapper">
+          <img src="mega_prompt_5/lbm_vorticity_20000.png" alt="Lattice Boltzmann vorticity field showing von Karman vortex street behind cylinder" loading="lazy">
+        </div>
+        <div class="card-body">
+          <p class="card-description">
+            A GPU-accelerated D2Q9 Lattice Boltzmann fluid solver producing beautiful von Karman vortex
+            streets. Implements BGK collision, Zou-He velocity inlet, zero-gradient outlet, and bounce-back
+            boundaries. Simulates flow around a cylinder at Re=200 on an 800x200 grid, achieving ~179 MLUPS
+            (million lattice updates per second) on GPU. Pure Python matching specialized CFD codes.
+          </p>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Key Features</div>
+            <ul class="features-list">
+              <li>D2Q9 Lattice Boltzmann method</li>
+              <li>BGK collision operator</li>
+              <li>Zou-He velocity inlet</li>
+              <li>Bounce-back boundaries</li>
+              <li>Von Karman vortex street</li>
+              <li>~179 MLUPS on GPU</li>
+              <li>Vorticity + velocity viz</li>
+              <li>Configurable Reynolds number</li>
+            </ul>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">How to Run</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-label">Default (800x200, Re=200, 20k steps)</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_5/lbm_solver.py</pre>
+            </div>
+            <div class="code-block" style="margin-top: 8px;">
+              <div class="code-block-header">
+                <span class="code-block-label">Custom Reynolds number and grid</span>
+                <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">uv run</span> <span class="flag">--with</span> <span class="str">matplotlib</span> <span class="flag">--with</span> <span class="str">Pillow</span> python prompts/mega_prompt_5/lbm_solver.py <span class="flag">--Re</span> 400 <span class="flag">--grid</span> 1600x400</pre>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Vortex Street Animation</div>
+            <div class="gif-container">
+              <img src="mega_prompt_5/lbm_vorticity.gif" alt="Animated vorticity field showing vortex street development behind cylinder" loading="lazy">
+              <div class="gif-label">lbm_vorticity.gif &mdash; Von Karman vortex street developing at Re=200</div>
+            </div>
+          </div>
+
+          <div class="card-subsection">
+            <div class="card-subsection-title">Warp APIs Used</div>
+            <div class="api-tags">
+              <span class="api-tag">wp.array3d</span>
+              <span class="api-tag">@wp.kernel (2D grid)</span>
+              <span class="api-tag">wp.launch</span>
+              <span class="api-tag">wp.synchronize_device</span>
+              <span class="api-tag">wp.ScopedDevice</span>
+              <span class="api-tag">@wp.func</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  Built with <a href="https://github.com/NVIDIA/warp">NVIDIA Warp</a> &mdash;
+  High-performance GPU simulation in Python
+</footer>
+
+<script>
+// Copy code to clipboard
+function copyCode(button) {
+  const pre = button.closest('.code-block').querySelector('pre');
+  const text = pre.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = 'Copy'; }, 1500);
+  });
+}
+
+// Intersection Observer for active nav highlighting
+document.addEventListener('DOMContentLoaded', () => {
+  const sections = document.querySelectorAll('.megaprompt-section');
+  const navLinks = document.querySelectorAll('.sidebar-nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('data-target') === id);
+        });
+      }
+    });
+  }, {
+    rootMargin: '-10% 0px -80% 0px',
+    threshold: 0
+  });
+
+  sections.forEach(section => observer.observe(section));
+
+  // Set first nav link as active by default
+  if (navLinks.length > 0) {
+    navLinks[0].classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

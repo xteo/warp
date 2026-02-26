@@ -1,0 +1,326 @@
+{
+  "warp.examples.core.example_raymarch": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.8,
+    "tail": "render took 239.76 ms\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_raymarch_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_raymarch_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_raymarch_fig1.png\n[OK] warp.examples.core.example_raymarch completed successfully"
+  },
+  "warp.examples.core.example_raycast": {
+    "success": true,
+    "screenshots": [
+      "example_raycast_fig1.png"
+    ],
+    "time_s": 1.5,
+    "tail": "render took 375.11 ms\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_raycast_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_raycast_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_raycast_fig1.png\n[OK] warp.examples.core.example_raycast completed successfully"
+  },
+  "warp.examples.core.example_fluid": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.3,
+    "tail": "render took 0.28 ms\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_fluid_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_fluid_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_fluid_fig1.png\n[OK] warp.examples.core.example_fluid completed successfully"
+  },
+  "warp.examples.core.example_graph_capture": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.0,
+    "tail": "Module __main__ cd342c0 load on device 'cuda:0' took 0.75 ms  (cached)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_graph_capture_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_graph_capture_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_graph_capture_fig1.png\n[OK] warp.examples.core.example_graph_capture completed successfully"
+  },
+  "warp.examples.core.example_fft_poisson_navier_stokes_2d": {
+    "success": true,
+    "screenshots": [
+      "example_fft_poisson_navier_stokes_2d_fig1.png"
+    ],
+    "time_s": 5.5,
+    "tail": "Module __main__ 9c7307b load on device 'cuda:0' took 4336.07 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_fft_poisson_navier_stokes_2d_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_fft_poisson_navier_stokes_2d_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_fft_poisson_navier_stokes_2d_fig1.png\n[OK] warp.examples.core.example_fft_poisson_navier_stokes_2d completed successfully"
+  },
+  "warp.examples.core.example_dem": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 2.3,
+    "tail": "render took 25.65 ms\nstep took 0.04 ms\nrender took 26.29 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_dem.usd`\n[OK] warp.examples.core.example_dem completed successfully"
+  },
+  "warp.examples.core.example_marching_cubes": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.7,
+    "tail": "Render took 4.54 ms\nstep took 0.22 ms\nRender took 4.39 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_marching_cubes.usd`\n[OK] warp.examples.core.example_marching_cubes completed successfully"
+  },
+  "warp.examples.core.example_wave": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.7,
+    "tail": "render took 0.26 ms\nstep took 0.37 ms\nrender took 0.26 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_wave.usd`\n[OK] warp.examples.core.example_wave completed successfully"
+  },
+  "warp.examples.core.example_mesh": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 2.2,
+    "tail": "render took 1.66 ms\nstep took 0.04 ms\nrender took 0.21 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_mesh.usd`\n[OK] warp.examples.core.example_mesh completed successfully"
+  },
+  "warp.examples.core.example_mesh_intersect": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 2.1,
+    "tail": "    Module __main__ 87c5c8f load on device 'cuda:0' took 422.94 ms  (compiled)\nstep took 423.72 ms\nrender took 492.95 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_mesh_intersect.usd`\n[OK] warp.examples.core.example_mesh_intersect completed successfully"
+  },
+  "warp.examples.core.example_nvdb": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 2.0,
+    "tail": "render took 0.37 ms\nstep took 0.03 ms\nrender took 0.36 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_nvdb.usd`\n[OK] warp.examples.core.example_nvdb completed successfully"
+  },
+  "warp.examples.core.example_sample_mesh": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.1,
+    "tail": "render took 0.14 ms\nstep took 0.01 ms\nrender took 0.60 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_sample_mesh.usd`\n[OK] warp.examples.core.example_sample_mesh completed successfully"
+  },
+  "warp.examples.core.example_sph": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 15.1,
+    "tail": "step took 3.19 ms\nrender took 29.21 ms\nstep took 3.19 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_sph.usd`\n[OK] warp.examples.core.example_sph completed successfully"
+  },
+  "warp.examples.core.example_spin_lock": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.2,
+    "tail": "     /home/xteo/.cache/warp/1.13.0.dev0\nModule __main__ cda91f4 load on device 'cuda:0' took 225.73 ms  (compiled)\nFinal counter value: 1024\nFinal atomic counter value: 1024\n[OK] warp.examples.core.example_spin_lock completed successfully"
+  },
+  "warp.examples.core.example_work_queue": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.4,
+    "tail": "     \"cuda:0\"   : \"NVIDIA GB10\" (120 GiB, sm_121, mempool enabled)\n   Kernel cache:\n     /home/xteo/.cache/warp/1.13.0.dev0\nModule __main__ 9d9efb8 load on device 'cuda:0' took 288.03 ms  (compiled)\n[OK] warp.examples.core.example_work_queue completed successfully"
+  },
+  "warp.examples.optim.example_diffray": {
+    "success": true,
+    "screenshots": [
+      "example_diffray_animation.gif",
+      "example_diffray_final_image.png",
+      "example_diffray_target_image.png"
+    ],
+    "time_s": 6.8,
+    "tail": "Saved the final image at `example_diffray_final_image.png`\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_diffray_animation.gif\n[SCREENSHOT] Saved animation: /home/xteo/repos/warp/screenshots/example_diffray_animation.gif\nSaved the animation at `example_diffray_animation.gif`\n[OK] warp.examples.optim.example_diffray completed successfully"
+  },
+  "warp.examples.optim.example_fluid_checkpoint": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 3.8,
+    "tail": "Iteration 00047 loss: 0.420638\nIteration 00048 loss: 0.418810\nIteration 00049 loss: 0.416994\n[OK] warp.examples.optim.example_fluid_checkpoint completed successfully\nWarning: No interactive matplotlib backend available. Skipping visualization. Install python3-tk (Linux) or PySide6 to enable visualization."
+  },
+  "warp.examples.optim.example_particle_repulsion": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 6.4,
+    "tail": "   Kernel cache:\n     /home/xteo/.cache/warp/1.13.0.dev0\nModule __main__ ec6600a load on device 'cuda:0' took 304.66 ms  (compiled)\n[OK] warp.examples.optim.example_particle_repulsion completed successfully\nWarning: No interactive matplotlib backend available. Skipping visualization. Install python3-tk (Linux) or PySide6 to enable visualization."
+  },
+  "warp.examples.tile.example_tile_mlp": {
+    "success": true,
+    "screenshots": [
+      "example_tile_mlp.jpg"
+    ],
+    "time_s": 30.4,
+    "tail": "Epoch: 0 Loss: [0.06407988]\n    Epoch took 56.86 ms\nTraining took 56.87 ms\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_tile_mlp.jpg\n[OK] warp.examples.tile.example_tile_mlp completed successfully"
+  },
+  "warp.examples.tile.example_tile_nbody": {
+    "success": true,
+    "screenshots": [
+      "example_tile_nbody_fig1.png"
+    ],
+    "time_s": 1.2,
+    "tail": "     /home/xteo/.cache/warp/1.13.0.dev0\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_tile_nbody_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_tile_nbody_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_tile_nbody_fig1.png\n[OK] warp.examples.tile.example_tile_nbody completed successfully"
+  },
+  "warp.examples.tile.example_tile_fft": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 4.4,
+    "tail": "  [32.  0.]\n  [32.  0.]\n  [32.  0.]\n  [32.  0.]]]\n[OK] warp.examples.tile.example_tile_fft completed successfully"
+  },
+  "warp.examples.tile.example_tile_filtering": {
+    "success": true,
+    "screenshots": [
+      "example_tile_filtering_fig1.png"
+    ],
+    "time_s": 4.4,
+    "tail": "Module __main__ df8745d load on device 'cuda:0' took 3293.87 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_tile_filtering_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_tile_filtering_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_tile_filtering_fig1.png\n[OK] warp.examples.tile.example_tile_filtering completed successfully"
+  },
+  "warp.examples.tile.example_tile_matmul": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 9.0,
+    "tail": " [11.378129  13.528232  11.863063  ... 12.78446   13.227648  13.274796 ]\n [12.018528  14.981027  13.214415  ... 15.009214  14.333916  13.069493 ]\n [11.6935215 13.729408  10.993328  ... 12.885787  13.502053  12.1981735]]\nExample matrix multiplication passed\n[OK] warp.examples.tile.example_tile_matmul completed successfully"
+  },
+  "warp.examples.tile.example_tile_convolution": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 4.3,
+    "tail": "  [ 2.90506717 -1.17156663]\n  [-0.36824896  0.34155555]\n  [ 1.72869764 -0.98685708]\n  [-0.24527785  0.77733758]]]\n[OK] warp.examples.tile.example_tile_convolution completed successfully"
+  },
+  "warp.examples.tile.example_tile_mcgp": {
+    "success": true,
+    "screenshots": [
+      "example_tile_mcgp_animation.gif"
+    ],
+    "time_s": 96.8,
+    "tail": "Creating the animation\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_tile_mcgp_animation.gif\n[SCREENSHOT] Saved animation: /home/xteo/repos/warp/screenshots/example_tile_mcgp_animation.gif\nSaved the animation at `example_tile_mcgp_animation.gif`\n[OK] warp.examples.tile.example_tile_mcgp completed successfully"
+  },
+  "warp.examples.tile.example_tile_cholesky": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 3.4,
+    "tail": "  0.91891892  1.11891892  1.31891892  1.51891892  1.71891892  1.91891892\n  2.11891892  2.31891892  2.51891892  2.71891892  2.91891892  3.11891892\n  3.31891892  3.51891892]\nExample Tile Cholesky passed\n[OK] warp.examples.tile.example_tile_cholesky completed successfully"
+  },
+  "warp.examples.tile.example_tile_block_cholesky": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 44.8,
+    "tail": "Solving with Warp kernels:\nWarp Cholesky factorization error: 1.004e-02\nWarp solution residual norm: 1.024e-05\nDifference between CPU and GPU solutions: 6.272e-09\n[OK] warp.examples.tile.example_tile_block_cholesky completed successfully"
+  },
+  "warp.examples.tile.example_tile_stream_compaction": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 1.2,
+    "tail": "  480.  500.  520.  540.  560.  580.  600.  620.  640.  660.  680.  700.\n  720.  740.  760.  780.  800.  820.  840.  860.  880.  900.  920.  940.\n  960.  980. 1000. 1020. 1040. 1060. 1080. 1100. 1120. 1140. 1160. 1180.\n 1200. 1220. 1240. 1260.]\n[OK] warp.examples.tile.example_tile_stream_compaction completed successfully"
+  },
+  "warp.examples.fem.example_diffusion": {
+    "success": true,
+    "screenshots": [
+      "example_diffusion_fig1.png"
+    ],
+    "time_s": 7.7,
+    "tail": "Module warp._src.fem.space.basis_space.dyn.fill_node_positions_1aa188bb aa33ff7 load on device 'cuda:0' took 123.02 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_diffusion_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_diffusion_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_diffusion_fig1.png\n[OK] warp.examples.fem.example_diffusion completed successfully"
+  },
+  "warp.examples.fem.example_diffusion_3d": {
+    "success": true,
+    "screenshots": [
+      "example_diffusion_3d_fig1.png"
+    ],
+    "time_s": 3.4,
+    "tail": "Module warp._src.fem.space.basis_space.dyn.fill_node_positions_314efb42 096e00d load on device 'cuda:0' took 154.12 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_diffusion_3d_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_diffusion_3d_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_diffusion_3d_fig1.png\n[OK] warp.examples.fem.example_diffusion_3d completed successfully"
+  },
+  "warp.examples.fem.example_stokes": {
+    "success": true,
+    "screenshots": [
+      "example_stokes_fig1.png"
+    ],
+    "time_s": 9.4,
+    "tail": "Module warp._src.fem.space.topology.dyn.fill_element_node_indices_477e2402 ae45e3d load on device 'cuda:0' took 117.85 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_stokes_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_stokes_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_stokes_fig1.png\n[OK] warp.examples.fem.example_stokes completed successfully"
+  },
+  "warp.examples.fem.example_navier_stokes": {
+    "success": true,
+    "screenshots": [
+      "example_navier_stokes_fig1.png"
+    ],
+    "time_s": 9.8,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_navier_stokes_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_navier_stokes_fig1.png\n[OK] warp.examples.fem.example_navier_stokes completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_mixed_elasticity": {
+    "success": true,
+    "screenshots": [
+      "example_mixed_elasticity_fig1.png"
+    ],
+    "time_s": 10.6,
+    "tail": "Module warp._src.fem.space.topology.dyn.fill_element_node_indices_195ac889 59dfab2 load on device 'cuda:0' took 152.51 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_mixed_elasticity_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_mixed_elasticity_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_mixed_elasticity_fig1.png\n[OK] warp.examples.fem.example_mixed_elasticity completed successfully"
+  },
+  "warp.examples.fem.example_convection_diffusion": {
+    "success": true,
+    "screenshots": [
+      "example_convection_diffusion_fig1.png"
+    ],
+    "time_s": 5.7,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_convection_diffusion_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_convection_diffusion_fig1.png\n[OK] warp.examples.fem.example_convection_diffusion completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_convection_diffusion_dg": {
+    "success": true,
+    "screenshots": [
+      "example_convection_diffusion_dg_fig1.png"
+    ],
+    "time_s": 12.0,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_convection_diffusion_dg_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_convection_diffusion_dg_fig1.png\n[OK] warp.examples.fem.example_convection_diffusion_dg completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_burgers": {
+    "success": true,
+    "screenshots": [
+      "example_burgers_fig1.png"
+    ],
+    "time_s": 5.3,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_burgers_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_burgers_fig1.png\n[OK] warp.examples.fem.example_burgers completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_deformed_geometry": {
+    "success": true,
+    "screenshots": [
+      "example_deformed_geometry_fig1.png"
+    ],
+    "time_s": 7.1,
+    "tail": "Module warp._src.fem.space.topology.dyn.fill_element_node_indices_64276bc3 b16c003 load on device 'cuda:0' took 123.89 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_deformed_geometry_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_deformed_geometry_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_deformed_geometry_fig1.png\n[OK] warp.examples.fem.example_deformed_geometry completed successfully"
+  },
+  "warp.examples.fem.example_streamlines": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 7.2,
+    "tail": "Module warp.optim.linear e56ba40 load on device 'cuda:0' took 276.18 ms  (compiled)\ncr: terminated after 55 iterations with error = \t 9.910934295476181e-07 (OK)\nModule __main__.spawn_streamlines_59addd82 3f2e609 load on device 'cuda:0' took 144.14 ms  (compiled)\nModule __main__.gen_streamlines_1b6d250c dedc4d2 load on device 'cuda:0' took 188.66 ms  (compiled)\n[OK] warp.examples.fem.example_streamlines completed successfully"
+  },
+  "warp.examples.fem.example_stokes_transfer": {
+    "success": true,
+    "screenshots": [
+      "example_stokes_transfer_fig1.png"
+    ],
+    "time_s": 9.2,
+    "tail": "Module warp._src.fem.space.topology.dyn.fill_element_node_indices_b222db2b 6a35da1 load on device 'cuda:0' took 0.30 ms  (cached)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_stokes_transfer_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_stokes_transfer_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_stokes_transfer_fig1.png\n[OK] warp.examples.fem.example_stokes_transfer completed successfully"
+  },
+  "warp.examples.fem.example_nonconforming_contact": {
+    "success": true,
+    "screenshots": [
+      "example_nonconforming_contact_fig1.png"
+    ],
+    "time_s": 11.8,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_nonconforming_contact_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_nonconforming_contact_fig1.png\n[OK] warp.examples.fem.example_nonconforming_contact completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_elastic_shape_optimization": {
+    "success": true,
+    "screenshots": [
+      "example_elastic_shape_optimization_fig1.png"
+    ],
+    "time_s": 12.5,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_elastic_shape_optimization_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_elastic_shape_optimization_fig1.png\n[OK] warp.examples.fem.example_elastic_shape_optimization completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  },
+  "warp.examples.fem.example_adaptive_grid": {
+    "success": true,
+    "screenshots": [
+      "example_adaptive_grid_fig1.png"
+    ],
+    "time_s": 17.5,
+    "tail": "Module warp._src.fem.space.basis_space.dyn.fill_node_positions_26001017 2e5eabd load on device 'cuda:0' took 148.13 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_adaptive_grid_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_adaptive_grid_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_adaptive_grid_fig1.png\n[OK] warp.examples.fem.example_adaptive_grid completed successfully"
+  },
+  "warp.examples.fem.example_apic_fluid": {
+    "success": true,
+    "screenshots": [],
+    "time_s": 17.8,
+    "tail": "cr: terminated after 88 iterations with error = \t 5.595971742877737e-06 (OK)\nsimulate frame 250 took 22.53 ms\nrender took 13.01 ms\nSaved the USD stage file at `/home/xteo/repos/warp/example_apic_fluid.usd`\n[OK] warp.examples.fem.example_apic_fluid completed successfully"
+  },
+  "warp.examples.fem.example_magnetostatics": {
+    "success": true,
+    "screenshots": [
+      "example_magnetostatics_fig1.png"
+    ],
+    "time_s": 9.6,
+    "tail": "Module warp._src.fem.space.basis_space.dyn.fill_node_positions_5df1b198 f0f559d load on device 'cuda:0' took 209.50 ms  (compiled)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_magnetostatics_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_magnetostatics_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_magnetostatics_fig1.png\n[OK] warp.examples.fem.example_magnetostatics completed successfully"
+  },
+  "warp.examples.fem.example_distortion_energy": {
+    "success": true,
+    "screenshots": [
+      "example_distortion_energy_fig1.png"
+    ],
+    "time_s": 5.7,
+    "tail": "Module warp._src.fem.space.topology.dyn.fill_element_node_indices_7b93b9db ea0f5ef load on device 'cuda:0' took 0.30 ms  (cached)\n[SCREENSHOT] Saved PIL: /home/xteo/repos/warp/screenshots/example_distortion_energy_fig1.png\n[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_distortion_energy_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_distortion_energy_fig1.png\n[OK] warp.examples.fem.example_distortion_energy completed successfully"
+  },
+  "warp.examples.fem.example_darcy_ls_optimization": {
+    "success": true,
+    "screenshots": [
+      "example_darcy_ls_optimization_fig1.png"
+    ],
+    "time_s": 8.8,
+    "tail": "[SCREENSHOT] Saved imsave: /home/xteo/repos/warp/screenshots/example_darcy_ls_optimization_fig1.png\n[SCREENSHOT] Saved: /home/xteo/repos/warp/screenshots/example_darcy_ls_optimization_fig1.png\n[OK] warp.examples.fem.example_darcy_ls_optimization completed successfully\n/home/xteo/.cache/uv/archive-v0/fojOdKjnItAr2o8875gij/lib/python3.12/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.\n  warnings.warn("
+  }
+}
