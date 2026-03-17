@@ -2912,6 +2912,33 @@ class Module:
                 # write cuda sources
                 cu_source = builder.codegen("cuda")
 
+                # Content-hash based compilation caching
+                import hashlib
+                content_hasher = hashlib.sha256()
+                content_hasher.update(cu_source.encode('utf-8'))
+                # Include compilation options that affect the output
+                content_hasher.update(f"{builder_options['output_arch']}{arch_suffix}{mode}{opt}".encode('utf-8'))
+                content_hasher.update(f"{warp.config.verify_fp}{self.options['fast_math']}{self.options['fuse_fp']}".encode('utf-8'))
+                content_hasher.update(f"{self.options['lineinfo']}{self.options['compile_time_trace']}".encode('utf-8'))
+                content_hash = content_hasher.hexdigest()
+
+                # Global cache directory for content-hashed binaries
+                content_cache_dir = os.path.join(warp.config.kernel_cache_dir, "content_cache")
+                content_cache_path = os.path.join(content_cache_dir, f"{content_hash}_{output_name}")
+
+                # Check if we can reuse a previously compiled binary
+                if os.path.exists(content_cache_path):
+                    import shutil
+                    final_output_path = os.path.join(output_dir, output_name)
+                    os.makedirs(output_dir, exist_ok=True)
+                    shutil.copy2(content_cache_path, final_output_path)
+                    if warp.config.verbose:
+                        print(f"[NVRTC Cache] Reusing compiled binary for content hash {content_hash[:8]}")
+                    # Save metadata
+                    with open(os.path.join(output_dir, self._get_meta_name()), "w") as meta_file:
+                        json.dump(builder.meta, meta_file, indent=2)
+                    return True
+
                 with open(source_code_path, "w") as cu_file:
                     cu_file.write(cu_source)
 
@@ -2974,6 +3001,19 @@ class Module:
                     os.replace(output_path, binary_path)
                 except OSError:
                     # another process likely updated the module dir first
+                    pass
+
+            # Cache compiled binary by content hash for future reuse
+            if os.path.exists(binary_path) and 'content_cache_path' in locals():
+                try:
+                    os.makedirs(content_cache_dir, exist_ok=True)
+                    if not os.path.exists(content_cache_path):
+                        import shutil
+                        shutil.copy2(binary_path, content_cache_path)
+                        if warp.config.verbose:
+                            print(f"[NVRTC Cache] Stored compiled binary with content hash {content_hash[:8]}")
+                except (OSError, IOError):
+                    # Ignore cache failures - compilation still succeeded
                     pass
 
             if not os.path.exists(meta_path) or self.options["strip_hash"]:

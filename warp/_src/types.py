@@ -2626,6 +2626,7 @@ def seq_match_ellipsis(a, b) -> bool:
     return True
 
 
+@functools.lru_cache(maxsize=1024)
 def types_equal_generic(a, b, match_generic=True):
     if match_generic:
         a_is_seq = True
