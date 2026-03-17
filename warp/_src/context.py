@@ -364,6 +364,7 @@ class Function:
         native_func,
         defaults,
         require_original_output_arg,
+        _types_already_resolved=False,
     ):
         """Fast-path constructor for concrete builtin overloads.
 
@@ -379,7 +380,12 @@ class Function:
         self.export_func = export_func
         self.dispatch_func = dispatch_func
         self.lto_dispatch_func = lto_dispatch_func
-        self.input_types = {k: warp._src.types.type_to_warp(v) for k, v in input_types.items()}
+        # Skip type_to_warp conversion when types are already resolved Warp types
+        # (true for concrete overloads from add_builtin generic expansion)
+        if _types_already_resolved:
+            self.input_types = input_types
+        else:
+            self.input_types = {k: warp._src.types.type_to_warp(v) for k, v in input_types.items()}
         self.export = export
         self.doc = doc
         self.__doc__ = doc
@@ -408,7 +414,15 @@ class Function:
                 if warp._src.types.is_array(v) or v in complex_type_hints:
                     simple = False
                     break
-            self.mangled_name = self.mangle() if simple else None
+            if simple:
+                # Inline mangle() to avoid method call overhead
+                if export_func is not None:
+                    func_args = export_func(self.input_types)
+                else:
+                    func_args = self.input_types
+                self.mangled_name = "_".join(["wp_builtin_" + key, *(t.__name__ for t in func_args.values())])
+            else:
+                self.mangled_name = None
         else:
             self.mangled_name = None
         self._adj = None
@@ -1935,6 +1949,7 @@ def add_builtin(
                     native_func=native_func,
                     defaults=defaults,
                     require_original_output_arg=require_original_output_arg,
+                    _types_already_resolved=True,
                 )
                 if key in builtin_functions:
                     builtin_functions[key].add_overload(concrete_func)
