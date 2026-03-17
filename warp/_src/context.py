@@ -1726,6 +1726,9 @@ scalar_types = {}
 scalar_types.update({x: x for x in warp._src.types.scalar_types})
 scalar_types.update({x: x._wp_scalar_type_ for x in warp._src.types.vector_types})
 
+# Cache for value_func lambdas by return type — avoids creating ~2400 identical lambdas
+_value_func_cache: dict[type, Callable] = {}
+
 
 def add_builtin(
     key: str,
@@ -1804,9 +1807,18 @@ def add_builtin(
 
     # wrap simple single-type functions with a value_func()
     if value_func is None:
-
-        def value_func(arg_types, arg_values):
-            return value_type
+        # Use cached lambda if possible (avoids creating closure per add_builtin call)
+        try:
+            value_func = _value_func_cache.get(value_type)
+        except TypeError:
+            value_func = None  # unhashable value_type (e.g., list)
+        if value_func is None:
+            _vt = value_type
+            value_func = lambda arg_types, arg_values, _v=_vt: _v
+            try:
+                _value_func_cache[value_type] = value_func
+            except TypeError:
+                pass
 
     if initializer_list_func is None:
         initializer_list_func = _default_initializer_list_func
@@ -1913,9 +1925,13 @@ def add_builtin(
                 if return_type is Any:
                     concrete_vf = value_func
                 else:
-                    # replicate the default value_func wrapper from add_builtin
-                    _rt = return_type
-                    concrete_vf = lambda arg_types, arg_values, _r=_rt: _r
+                    # Cache value_func lambdas by return type to avoid
+                    # creating ~2400 identical lambda objects
+                    concrete_vf = _value_func_cache.get(return_type)
+                    if concrete_vf is None:
+                        _rt = return_type
+                        concrete_vf = lambda arg_types, arg_values, _r=_rt: _r
+                        _value_func_cache[return_type] = concrete_vf
                 concrete_func = Function._create_concrete_builtin(
                     key=key,
                     namespace=namespace,
