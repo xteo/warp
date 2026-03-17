@@ -7453,10 +7453,30 @@ def launch(
     if runtime is None:
         init()
 
+    # Ultra-fast path: most common case is repeated CUDA forward launch
+    # with default args (no stream, no adjoint, no record_cmd, no outputs).
+    # Check the cheapest conditions first.
+    if (
+        kernel._launch_hooks is not None
+        and not adjoint
+        and stream is None
+        and not record_cmd
+        and not outputs
+    ):
+        device = runtime.get_device(device)
+        if (
+            kernel._launch_device is device
+            and not runtime.tape
+            and not warp.config.print_launches
+            and len(inputs) == len(kernel.adj.args)
+        ):
+            _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim)
+            return
+
     # if stream is specified, use the associated device
     if stream is not None:
         device = stream.device
-    else:
+    elif not isinstance(device, Device):
         device = runtime.get_device(device)
 
     if device == "cpu":
