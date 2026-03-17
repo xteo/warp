@@ -32,12 +32,7 @@ from warp._src.utils import runlength_encode as runlength_encode
 from warp._src.utils import segmented_sort_pairs as segmented_sort_pairs
 
 
-# category: Graph Coloring
-
-from warp._src.coloring import GraphColoringAlgorithm as GraphColoringAlgorithm
-from warp._src.coloring import graph_coloring_assign as graph_coloring_assign
-from warp._src.coloring import graph_coloring_balance as graph_coloring_balance
-from warp._src.coloring import graph_coloring_get_groups as graph_coloring_get_groups
+# category: Graph Coloring (deferred to __getattr__ to save ~2ms import time)
 
 
 # category: Misc
@@ -49,8 +44,22 @@ from warp._src.utils import create_warp_function as create_warp_function
 
 from warp._src import utils as _utils
 
+_coloring_names = frozenset({
+    "GraphColoringAlgorithm",
+    "graph_coloring_assign",
+    "graph_coloring_balance",
+    "graph_coloring_get_groups",
+})
+
 
 def __getattr__(name):
+    if name in _coloring_names:
+        import warp._src.coloring as _coloring  # noqa: PLC0415
+
+        for _n in _coloring_names:
+            globals()[_n] = getattr(_coloring, _n)
+        return globals()[name]
+
     from warp._src.utils import get_deprecated_api  # noqa: PLC0415
 
     return get_deprecated_api(_utils, "warp", name)
