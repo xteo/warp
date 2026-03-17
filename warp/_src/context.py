@@ -7386,25 +7386,28 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
             kparams[i + 1] = _addressof(packed)
             input_ids[i] = inputs[i]
 
-    stream = device.stream
+    # Access stream/context directly (bypass property checks) — safe because
+    # the fast path pre-condition ensures the device is initialized CUDA
+    stream = device._stream
+    cuda_stream = stream.cuda_stream
     hooks = kernel._launch_hooks
 
     # Graph capture check — use truthiness instead of len() for speed
-    if runtime.captures and runtime.core.wp_cuda_stream_is_capturing(stream.cuda_stream):
-        capture_id = runtime.core.wp_cuda_stream_get_capture_id(stream.cuda_stream)
+    if runtime.captures and runtime.core.wp_cuda_stream_is_capturing(cuda_stream):
+        capture_id = runtime.core.wp_cuda_stream_get_capture_id(cuda_stream)
         graph = runtime.captures.get(capture_id)
         if graph is not None:
             graph.retain_module_exec(kernel._launch_module_exec)
 
     runtime.core.wp_cuda_launch_kernel(
-        device.context,
+        device._context,
         hooks.forward,
         bounds.size,
         max_blocks,
         block_dim,
         hooks.forward_smem_bytes,
         kparams,
-        stream.cuda_stream,
+        cuda_stream,
     )
 
 
