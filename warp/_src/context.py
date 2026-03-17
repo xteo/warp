@@ -7747,29 +7747,28 @@ def launch(
     """
 
     # init() is a no-op if already initialized; inline the check for speed
-    if runtime is None:
+    _rt = runtime
+    if _rt is None:
         init()
+        _rt = runtime
 
     # Ultra-fast path: most common case is repeated CUDA forward launch
     # with default args (no stream, no adjoint, no record_cmd, no outputs).
-    # Check the cheapest conditions first.
-    if (
-        kernel._launch_hooks is not None
-        and not adjoint
-        and stream is None
-        and not record_cmd
-        and not outputs
-    ):
-        # Inline device resolution: skip get_device() method call for None
-        device = runtime.default_device if device is None else runtime.get_device(device)
-        if (
-            kernel._launch_device is device
-            and not runtime.tape
-            and not warp.config.print_launches
-            and len(inputs) == kernel._fast_nargs
-        ):
-            _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim)
-            return
+    # All cheap local-var checks first, then attribute lookups.
+    if not adjoint and stream is None and not record_cmd and not outputs:
+        _hooks = kernel._launch_hooks
+        if _hooks is not None:
+            # Inline device resolution: skip get_device() method call for None
+            _dev = _rt.default_device if device is None else _rt.get_device(device)
+            if (
+                kernel._launch_device is _dev
+                and not _rt.tape
+                and not warp.config.print_launches
+                and len(inputs) == kernel._fast_nargs
+            ):
+                _launch_cuda_fast(kernel, dim, inputs, _dev, max_blocks, block_dim)
+                return
+            device = _dev
 
     # if stream is specified, use the associated device
     if stream is not None:
