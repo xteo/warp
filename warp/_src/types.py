@@ -2836,6 +2836,44 @@ class array(Array):
         instance.deleter = None
         return instance
 
+    @staticmethod
+    def _fast_view(src, ptr, shape, strides, is_contiguous, grad=None):
+        """Create a lightweight view of an existing array, bypassing __init__.
+
+        This is an internal fast path for reshape/slice where we already know
+        the dtype, device, and shape are valid.
+        """
+        a = object.__new__(array)
+        a.ctype = None
+        a._requires_grad = False
+        a._grad = None
+        a._array_interface = None
+        a.is_transposed = False
+        a._ref = src
+        a._is_read = src._is_read
+        a.deleter = None
+        a.dtype = src.dtype
+        a.ndim = len(shape)
+        a.size = src.size if is_contiguous and len(shape) > 0 else 1
+        if not is_contiguous or len(shape) == 0:
+            a.size = 1
+            for d in shape:
+                a.size *= d
+        else:
+            a.size = src.size
+        a.shape = shape
+        a.strides = strides
+        a.ptr = ptr
+        a.device = src.device
+        a.pinned = src.pinned
+        a.is_contiguous = is_contiguous
+        if grad is not None:
+            a._requires_grad = True
+            a._grad = grad
+        dtype_size = type_size_in_bytes(src.dtype)
+        a.capacity = a.size * dtype_size
+        return a
+
     def __init__(
         self,
         data: list | tuple | npt.NDArray | None = None,
@@ -3599,26 +3637,41 @@ class array(Array):
         else:
             new_grad = None
 
-        a = array(
-            ptr=self.ptr + ptr_offset if self.ptr is not None else None,
-            dtype=self.dtype,
-            shape=tuple(new_shape),
-            strides=tuple(new_strides),
-            device=self.device,
-            pinned=self.pinned,
-            grad=new_grad,
-        )
-
-        # store back-ref to stop data being destroyed
-        a._ref = self
+        new_ptr = self.ptr + ptr_offset if self.ptr is not None else None
+        new_shape_t = tuple(new_shape)
+        new_strides_t = tuple(new_strides)
 
         if index_arrays:
+            a = array(
+                ptr=new_ptr,
+                dtype=self.dtype,
+                shape=new_shape_t,
+                strides=new_strides_t,
+                device=self.device,
+                pinned=self.pinned,
+                grad=new_grad,
+            )
+            a._ref = self
             indices = [None] * self.ndim
             for dim, index_array in index_arrays.items():
                 indices[dim] = index_array
             return indexedarray(a, indices)
-        else:
-            return a
+
+        # fast path for simple slices (no index arrays)
+        # check contiguity: strides must match contiguous layout
+        ndim = len(new_shape_t)
+        dtype_size = type_size_in_bytes(self.dtype)
+        is_contig = True
+        if ndim > 0:
+            expected = dtype_size
+            for i in range(ndim - 1, -1, -1):
+                if new_strides_t[i] != expected:
+                    is_contig = False
+                    break
+                expected *= new_shape_t[i]
+
+        a = array._fast_view(self, new_ptr, new_shape_t, new_strides_t, is_contig, grad=new_grad)
+        return a
 
     # construct a C-representation of the array for passing to kernels
     def __ctype__(self):
@@ -3976,22 +4029,18 @@ class array(Array):
         if size != self.size:
             raise RuntimeError("Reshaped array must have the same total size as the original.")
 
-        a = array(
-            ptr=self.ptr,
-            dtype=self.dtype,
-            shape=shape,
-            strides=None,
-            device=self.device,
-            pinned=self.pinned,
-            copy=False,
-            grad=None if self.grad is None else self.grad.reshape(shape),
-        )
+        # compute contiguous strides for new shape
+        ndim = len(shape)
+        dtype_size = type_size_in_bytes(self.dtype)
+        contiguous_strides = [0] * ndim
+        if ndim > 0:
+            contiguous_strides[ndim - 1] = dtype_size
+            for i in range(ndim - 2, -1, -1):
+                contiguous_strides[i] = contiguous_strides[i + 1] * shape[i + 1]
 
-        # transfer read flag
-        a._is_read = self._is_read
-
-        # store back-ref to stop data being destroyed
-        a._ref = self
+        grad_view = None if self.grad is None else self.grad.reshape(shape)
+        a = array._fast_view(self, self.ptr, shape, tuple(contiguous_strides), True, grad=grad_view)
+        a.size = size
         return a
 
     def view(self, dtype):
