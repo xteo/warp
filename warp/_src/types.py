@@ -2837,7 +2837,7 @@ class array(Array):
         return instance
 
     @staticmethod
-    def _fast_view(src, ptr, shape, strides, is_contiguous, grad=None):
+    def _fast_view(src, ptr, shape, strides, is_contiguous, grad=None, dtype_size=0):
         """Create a lightweight view of an existing array, bypassing __init__.
 
         This is an internal fast path for reshape/slice where we already know
@@ -2854,11 +2854,11 @@ class array(Array):
         a.deleter = None
         a.dtype = src.dtype
         a.ndim = len(shape)
-        a.size = src.size if is_contiguous and len(shape) > 0 else 1
         if not is_contiguous or len(shape) == 0:
-            a.size = 1
+            size = 1
             for d in shape:
-                a.size *= d
+                size *= d
+            a.size = size
         else:
             a.size = src.size
         a.shape = shape
@@ -2870,7 +2870,8 @@ class array(Array):
         if grad is not None:
             a._requires_grad = True
             a._grad = grad
-        dtype_size = type_size_in_bytes(src.dtype)
+        if dtype_size == 0:
+            dtype_size = type_size_in_bytes(src.dtype)
         a.capacity = a.size * dtype_size
         return a
 
@@ -3414,6 +3415,8 @@ class array(Array):
         self.is_contiguous = False
 
     def __del__(self):
+        if self.deleter is None:
+            return
         try:
             with self.device.context_guard:
                 self.deleter(self.ptr, self.capacity)
@@ -3562,7 +3565,8 @@ class array(Array):
             new_ptr = self.ptr + ptr_offset if self.ptr is not None else None
             # Contiguity: first dim stride matches only if step == 1
             is_contig = self.is_contiguous and step == 1
-            return array._fast_view(self, new_ptr, new_shape, new_strides, is_contig)
+            return array._fast_view(self, new_ptr, new_shape, new_strides, is_contig,
+                                    dtype_size=type_size_in_bytes(self.dtype))
 
         if isinstance(key, int):
             if self.ndim == 1:
@@ -4058,7 +4062,7 @@ class array(Array):
                     strides_list[i] = strides_list[i + 1] * shape[i + 1]
                 contiguous_strides = tuple(strides_list)
 
-            a = array._fast_view(self, self.ptr, shape, contiguous_strides, True)
+            a = array._fast_view(self, self.ptr, shape, contiguous_strides, True, dtype_size=dtype_size)
             a.size = size
             return a
 
