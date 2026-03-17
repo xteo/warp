@@ -7387,6 +7387,16 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
         kernel._fast_kparams = (ctypes.c_void_p * n)()
         kernel._fast_refs = [None] * n
         kernel._fast_input_ids = [None] * len(packers)
+        # Cache constant launch parameters for subsequent calls
+        hooks = kernel._launch_hooks
+        stream_obj = device._stream
+        kernel._fast_launch_const = (
+            device._context,
+            hooks.forward,
+            hooks.forward_smem_bytes,
+            stream_obj.cuda_stream,
+            _addressof(kernel._fast_kparams) if _fl_ext_initialized else None,
+        )
 
     # --- Args: skip packing if all inputs are the same objects ---
     input_ids = kernel._fast_input_ids
@@ -7411,11 +7421,8 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
             kparams[i + 1] = _addressof(packed)
             input_ids[i] = inputs[i]
 
-    # Access stream/context directly (bypass property checks) — safe because
-    # the fast path pre-condition ensures the device is initialized CUDA
-    stream = device._stream
-    cuda_stream = stream.cuda_stream
-    hooks = kernel._launch_hooks
+    # Use cached constants — avoid repeated attribute lookups
+    ctx, fwd_fn, smem_bytes, cuda_stream, kparams_ptr = kernel._fast_launch_const
 
     # Graph capture check — use truthiness instead of len() for speed
     if runtime.captures and runtime.core.wp_cuda_stream_is_capturing(cuda_stream):
@@ -7425,25 +7432,25 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
             graph.retain_module_exec(kernel._launch_module_exec)
 
     # Use C extension for launch if available — avoids ctypes FFI overhead
-    if _fl_ext_initialized:
+    if kparams_ptr is not None:
         _fl_ext_launch(
-            device._context,
-            hooks.forward,
+            ctx,
+            fwd_fn,
             bounds.size,
             max_blocks,
             block_dim,
-            hooks.forward_smem_bytes,
-            _addressof(kparams),
+            smem_bytes,
+            kparams_ptr,
             cuda_stream,
         )
     else:
         runtime.core.wp_cuda_launch_kernel(
-            device._context,
-            hooks.forward,
+            ctx,
+            fwd_fn,
             bounds.size,
             max_blocks,
             block_dim,
-            hooks.forward_smem_bytes,
+            smem_bytes,
             kparams,
             cuda_stream,
         )
