@@ -3517,6 +3517,9 @@ class Device:
         self._stream = None
         self.null_stream = None
 
+        # cached memory info (populated on first query to avoid repeated C API calls)
+        self._total_memory_cached = None
+
         # maps streams to started graph captures
         self.captures = {}
 
@@ -3724,15 +3727,18 @@ class Device:
         Querying memory information for the CPU device requires the `psutil` package to be installed
         and will return 0 otherwise.
         """
+        cached = self._total_memory_cached
+        if cached is not None:
+            return cached
         if self.is_cuda:
             total_mem = ctypes.c_size_t()
             self.runtime.core.wp_cuda_device_get_memory_info(self.ordinal, None, ctypes.byref(total_mem))
-            return total_mem.value
+            val = total_mem.value
         else:
             try:
                 import psutil  # noqa: PLC0415
 
-                return psutil.virtual_memory().total
+                val = psutil.virtual_memory().total
             except ModuleNotFoundError:
                 warp.utils.warn(
                     "Please install the 'psutil' package to query CPU memory information.",
@@ -3740,7 +3746,9 @@ class Device:
                     stacklevel=2,
                     once=True,
                 )
-                return 0
+                val = 0
+        self._total_memory_cached = val
+        return val
 
     @property
     def free_memory(self) -> int:
@@ -4759,6 +4767,8 @@ class Runtime:
             self.core.wp_cuda_device_get_mempool_used_mem_high.restype = ctypes.c_uint64
             self.core.wp_cuda_device_get_memory_info.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p]
             self.core.wp_cuda_device_get_memory_info.restype = None
+            self.core.wp_cuda_device_get_total_mem.argtypes = [ctypes.c_int]
+            self.core.wp_cuda_device_get_total_mem.restype = ctypes.c_size_t
             self.core.wp_cuda_device_get_uuid.argtypes = [ctypes.c_int, ctypes.c_char * 16]
             self.core.wp_cuda_device_get_uuid.restype = None
             self.core.wp_cuda_device_get_pci_domain_id.argtypes = [ctypes.c_int]
@@ -5325,7 +5335,9 @@ class Runtime:
                 if cuda_device.is_primary:
                     name_str = f'"{cuda_device.name}"'
                     arch_str = f"sm_{cuda_device.arch}"
-                    mem_str = f"{cuda_device.total_memory / 1024 / 1024 / 1024:.0f} GiB"
+                    mem_bytes = self.core.wp_cuda_device_get_total_mem(cuda_device.ordinal)
+                    cuda_device._total_memory_cached = mem_bytes
+                    mem_str = f"{mem_bytes / 1024 / 1024 / 1024:.0f} GiB"
                     if cuda_device.is_mempool_supported:
                         if cuda_device.is_mempool_enabled:
                             mempool_str = "mempool enabled"

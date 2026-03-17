@@ -76,6 +76,7 @@ static PFN_cuDevicePrimaryCtxRetain_v7000 pfn_cuDevicePrimaryCtxRetain;
 static PFN_cuDevicePrimaryCtxRelease_v11000 pfn_cuDevicePrimaryCtxRelease;
 static PFN_cuDeviceCanAccessPeer_v4000 pfn_cuDeviceCanAccessPeer;
 static PFN_cuMemGetInfo_v3020 pfn_cuMemGetInfo;
+static PFN_cuDeviceTotalMem_v3020 pfn_cuDeviceTotalMem;
 #if CUDA_VERSION >= 12080
 static PFN_cuMemcpyBatchAsync_v12080 pfn_cuMemcpyBatchAsync;
 #endif
@@ -238,6 +239,7 @@ bool init_cuda_driver()
     get_driver_entry_point("cuDevicePrimaryCtxRelease", 11000, &(void*&)pfn_cuDevicePrimaryCtxRelease);
     get_driver_entry_point("cuDeviceCanAccessPeer", 4000, &(void*&)pfn_cuDeviceCanAccessPeer);
     get_driver_entry_point("cuMemGetInfo", 3020, &(void*&)pfn_cuMemGetInfo);
+    get_driver_entry_point("cuDeviceTotalMem", 3020, &(void*&)pfn_cuDeviceTotalMem);
 #if CUDA_VERSION >= 12080
     if (driver_version >= 12080)
         get_driver_entry_point("cuMemcpyBatchAsync", 12080, &(void*&)pfn_cuMemcpyBatchAsync);
@@ -460,6 +462,11 @@ CUresult cuDeviceCanAccessPeer_f(int* can_access, CUdevice dev, CUdevice peer_de
 CUresult cuMemGetInfo_f(size_t* free, size_t* total)
 {
     return pfn_cuMemGetInfo ? pfn_cuMemGetInfo(free, total) : DRIVER_ENTRY_POINT_ERROR;
+}
+
+CUresult cuDeviceTotalMem_f(size_t* bytes, CUdevice dev)
+{
+    return pfn_cuDeviceTotalMem ? pfn_cuDeviceTotalMem(bytes, dev) : DRIVER_ENTRY_POINT_ERROR;
 }
 
 #if CUDA_VERSION >= 12080

@@ -2150,6 +2150,15 @@ void wp_cuda_device_get_memory_info(int ordinal, size_t* free_mem, size_t* total
 }
 
 
+size_t wp_cuda_device_get_total_mem(int ordinal)
+{
+    size_t total = 0;
+    if (ordinal >= 0 && ordinal < int(g_devices.size())) {
+        check_cu(cuDeviceTotalMem_f(&total, g_devices[ordinal].device));
+    }
+    return total;
+}
+
 void* wp_cuda_context_get_current() { return get_current_context(); }
 
 void wp_cuda_context_set_current(void* context)

@@ -943,6 +943,7 @@ WP_API uint64_t wp_cuda_device_get_mempool_release_threshold(int ordinal) { retu
 WP_API uint64_t wp_cuda_device_get_mempool_used_mem_current(int ordinal) { return 0; }
 WP_API uint64_t wp_cuda_device_get_mempool_used_mem_high(int ordinal) { return 0; }
 WP_API void wp_cuda_device_get_memory_info(int ordinal, size_t* free_mem, size_t* total_mem) { }
+WP_API size_t wp_cuda_device_get_total_mem(int ordinal) { return 0; }
 
 WP_API void* wp_cuda_context_get_current() { return NULL; }
 WP_API void wp_cuda_context_set_current(void* ctx) { }
