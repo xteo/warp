@@ -7340,6 +7340,31 @@ def _build_fast_packers(kernel, device):
 
 _addressof = ctypes.addressof
 
+# Try to import the fast launch C extension
+try:
+    from warp._src import _fast_launch as _fl_ext
+    _fl_ext_launch = _fl_ext.launch
+    _fl_ext_available = True
+except ImportError:
+    _fl_ext_available = False
+    _fl_ext_launch = None
+
+_fl_ext_initialized = False
+
+
+def _init_fast_launch_ext():
+    """Initialize the C extension with the warp.so library path."""
+    global _fl_ext_initialized
+    if _fl_ext_initialized or not _fl_ext_available:
+        return
+    try:
+        import os
+        dll_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", "warp.so")
+        _fl_ext.init_from_dll(dll_path)
+        _fl_ext_initialized = True
+    except Exception:
+        pass
+
 
 def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     """Fast path for common CUDA forward launches: no tape, no adjoint, no record_cmd, no generics."""
@@ -7399,16 +7424,29 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
         if graph is not None:
             graph.retain_module_exec(kernel._launch_module_exec)
 
-    runtime.core.wp_cuda_launch_kernel(
-        device._context,
-        hooks.forward,
-        bounds.size,
-        max_blocks,
-        block_dim,
-        hooks.forward_smem_bytes,
-        kparams,
-        cuda_stream,
-    )
+    # Use C extension for launch if available — avoids ctypes FFI overhead
+    if _fl_ext_initialized:
+        _fl_ext_launch(
+            device._context,
+            hooks.forward,
+            bounds.size,
+            max_blocks,
+            block_dim,
+            hooks.forward_smem_bytes,
+            _addressof(kparams),
+            cuda_stream,
+        )
+    else:
+        runtime.core.wp_cuda_launch_kernel(
+            device._context,
+            hooks.forward,
+            bounds.size,
+            max_blocks,
+            block_dim,
+            hooks.forward_smem_bytes,
+            kparams,
+            cuda_stream,
+        )
 
 
 def launch(
@@ -9838,6 +9876,9 @@ def init():
 
     if runtime is None:
         runtime = Runtime()
+        # Initialize fast launch C extension after runtime is ready
+        if _fl_ext_available:
+            _init_fast_launch_ext()
 
 
 def get_warp_version():
