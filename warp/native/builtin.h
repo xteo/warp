@@ -1502,6 +1502,43 @@ template <typename T> inline CUDA_CALLABLE T atomic_add(T* buf, T value)
 #endif
 }
 
+// Specialization for float32 with warp-level reduction to reduce atomic contention.
+// When all threads in a full warp target the same address, reduces values via
+// shuffle before issuing a single atomicAdd per warp (32x fewer atomics).
+template <> inline CUDA_CALLABLE float atomic_add(float* buf, float value)
+{
+#if !defined(__CUDA_ARCH__)
+    float old = buf[0];
+    buf[0] += value;
+    return old;
+#elif __CUDA_ARCH__ >= 700
+    unsigned mask = __activemask();
+    if (mask == 0xFFFFFFFFu)
+    {
+        // Full warp active — check if all lanes target the same address
+        unsigned peers = __match_any_sync(mask, (unsigned long long)buf);
+        if (peers == 0xFFFFFFFFu)
+        {
+            // Warp-level butterfly reduction
+            for (int offset = 16; offset > 0; offset >>= 1)
+            {
+                value += __shfl_down_sync(0xFFFFFFFFu, value, offset);
+            }
+            // Only lane 0 performs the atomic
+            if ((threadIdx.x & 31) == 0)
+            {
+                return atomicAdd(buf, value);
+            }
+            return 0.0f;
+        }
+    }
+    // Fallback: standard atomic for partial warps or mixed addresses
+    return atomicAdd(buf, value);
+#else
+    return atomicAdd(buf, value);
+#endif
+}
+
 template <> inline CUDA_CALLABLE int64 atomic_add(int64* buf, int64 value)
 {
 #if !defined(__CUDA_ARCH__)
