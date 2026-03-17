@@ -421,8 +421,9 @@ class Function:
             self.overloads.append(f)
 
             # make sure variadic overloads appear last so non variadic
-            # ones are matched first:
-            self.overloads.sort(key=operator.attrgetter("variadic"))
+            # ones are matched first (only re-sort when adding variadic):
+            if f.variadic:
+                self.overloads.sort(key=operator.attrgetter("variadic"))
 
         else:
             # get function signature based on the input types
@@ -1752,27 +1753,49 @@ def add_builtin(
                 except RuntimeError:
                     continue
 
-                # finally we can generate a function call for these concrete types:
-                add_builtin(
-                    key,
+                # Inline the concrete-type builtin creation to avoid
+                # re-entering add_builtin (saves function call overhead,
+                # redundant generic checks, and lambda re-creation)
+                if return_type is Any:
+                    concrete_vf = value_func
+                else:
+                    # replicate the default value_func wrapper from add_builtin
+                    _rt = return_type
+                    concrete_vf = lambda arg_types, arg_values, _r=_rt: _r
+                concrete_func = Function(
+                    func=None,
+                    key=key,
+                    namespace=namespace,
                     input_types=concrete_arg_types,
                     value_type=return_type,
-                    value_func=value_func if return_type is Any else None,
+                    value_func=concrete_vf,
                     export_func=export_func,
                     dispatch_func=dispatch_func,
                     lto_dispatch_func=lto_dispatch_func,
-                    doc=doc,
-                    namespace=namespace,
                     variadic=variadic,
                     initializer_list_func=initializer_list_func,
                     export=export,
+                    doc=doc,
                     group=group,
                     hidden=True,
                     skip_replay=skip_replay,
                     is_differentiable=is_differentiable,
+                    generic=False,
+                    native_func=native_func,
                     defaults=defaults,
                     require_original_output_arg=require_original_output_arg,
                 )
+                if key in builtin_functions:
+                    builtin_functions[key].add_overload(concrete_func)
+                else:
+                    builtin_functions[key] = concrete_func
+                    if export:
+                        if hasattr(warp, key):
+                            if getattr(warp, key).__name__ != "_overload_dummy":
+                                raise RuntimeError(
+                                    f"Trying to register builtin function '{key}' that would overwrite existing object."
+                                )
+                        setattr(warp, key, concrete_func)
 
     func = Function(
         func=None,
