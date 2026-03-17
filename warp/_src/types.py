@@ -1517,7 +1517,7 @@ def quaternion(dtype=Any):
         #     super().__init__(args)
 
     ret = quat_t
-    ret._wp_type_params_ = [dtype]
+    ret._wp_type_params_ = (dtype,)
     ret._wp_type_args_ = {"dtype": dtype}
     ret._wp_generic_type_str_ = "quat_t"
     ret._wp_generic_type_hint_ = Quaternion
@@ -1894,6 +1894,13 @@ vector_types = (
     spatial_matrixf,
     spatial_matrixd,
 )
+
+# Precomputed frozenset of all composite types (those with _wp_generic_type_hint_).
+# These are all created at module load time and the set is stable afterward.
+_composite_types: frozenset = frozenset(t for t in vector_types if hasattr(t, "_wp_generic_type_hint_"))
+
+# Precomputed frozenset for type_is_generic_scalar checks.
+_generic_scalar_types: frozenset = frozenset((Scalar, Float, Int))
 
 np_dtype_to_warp_type = {
     # Numpy scalar types
@@ -2464,7 +2471,11 @@ def type_is_transformation(t):
 
 def type_is_composite(t):
     """Return ``True`` if the type is a composite type (vector, matrix, quaternion, or transformation)."""
-    return isinstance(t, type) and hasattr(t, "_wp_generic_type_hint_")
+    if not isinstance(t, type):
+        return False
+    if t in _composite_types:
+        return True
+    return hasattr(t, "_wp_generic_type_hint_")
 
 
 value_types = (int, float, builtins.bool, *scalar_and_bool_types)
@@ -6617,9 +6628,17 @@ class HashGrid:
 
 generic_types = (Any, Scalar, Float, Int)
 
+# Precomputed set of all hashable types for which type_is_generic returns True.
+# Includes generic_types themselves plus composite types with generic scalar or zero dimensions.
+_generic_types_set: frozenset = frozenset(
+    {Any, Scalar, Float, Int}
+    | {t for t in _composite_types if hasattr(t, "_wp_scalar_type_") and t._wp_scalar_type_ in (Scalar, Float, Int)}
+    | {t for t in _composite_types if hasattr(t, "_shape_") and 0 in t._shape_}
+)
+
 
 def type_is_generic(t):
-    if t in generic_types:
+    if t in _generic_types_set:
         return True
 
     if is_array(t):
@@ -6628,11 +6647,10 @@ def type_is_generic(t):
     if get_origin(t) is tuple:
         return True
 
+    # Fallback for dynamically-created composite types not in the precomputed set
     if hasattr(t, "_wp_scalar_type_"):
-        # vector/matrix type, check if dtype is generic
         if type_is_generic(t._wp_scalar_type_):
             return True
-        # check if any dimension is generic
         for d in t._shape_:
             if d == 0:
                 return True
@@ -6641,7 +6659,7 @@ def type_is_generic(t):
 
 
 def type_is_generic_scalar(t):
-    return t in (Scalar, Float, Int)
+    return t in _generic_scalar_types
 
 
 def type_generic_equal(a, b):

@@ -672,8 +672,7 @@ def get_builtin_type(return_type: type) -> type:
     # The return_type might just be vector_t(length=3,dtype=wp.float32), so we've got to match that
     # in the list of hard coded types so it knows it's returning one of them:
     if warp._src.types.type_is_composite(return_type):
-        params = return_type._wp_type_params_
-        cache_key = (return_type._wp_generic_type_hint_, tuple(params) if isinstance(params, list) else params)
+        cache_key = (return_type._wp_generic_type_hint_, tuple(return_type._wp_type_params_))
         result = _builtin_type_cache.get(cache_key)
         if result is None:
             raise RuntimeError("No match")
@@ -1703,6 +1702,24 @@ for _hint in _generic_vtypes_by_hint:
     _generic_vtypes_by_hint[_hint] = tuple(_generic_vtypes_by_hint[_hint])
 
 # Cache for sorted scalar type sets used in add_builtin
+_sorted_scalartypes_cache: dict[frozenset, list] = {}
+
+def _build_vtypes_caches(vtypes):
+    """Build lookup caches for generic vector type operations."""
+    type_cache = {
+        (x._wp_generic_type_hint_, tuple(x._wp_type_params_)): x for x in vtypes
+    }
+    by_hint = {}
+    for vt in vtypes:
+        hint = vt._wp_generic_type_hint_
+        if hint not in by_hint:
+            by_hint[hint] = []
+        by_hint[hint].append(vt)
+    by_hint = {k: tuple(v) for k, v in by_hint.items()}
+    return type_cache, by_hint
+
+
+_builtin_type_cache, _generic_vtypes_by_hint = _build_vtypes_caches(generic_vtypes)
 _sorted_scalartypes_cache: dict[frozenset, list] = {}
 
 scalar_types = {}
