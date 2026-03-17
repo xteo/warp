@@ -364,6 +364,7 @@ class Function:
         native_func,
         defaults,
         require_original_output_arg,
+        _types_already_resolved=False,
     ):
         """Fast-path constructor for concrete builtin overloads.
 
@@ -379,7 +380,12 @@ class Function:
         self.export_func = export_func
         self.dispatch_func = dispatch_func
         self.lto_dispatch_func = lto_dispatch_func
-        self.input_types = {k: warp._src.types.type_to_warp(v) for k, v in input_types.items()}
+        # Skip type_to_warp conversion when types are already resolved Warp types
+        # (true for concrete overloads from add_builtin generic expansion)
+        if _types_already_resolved:
+            self.input_types = input_types
+        else:
+            self.input_types = {k: warp._src.types.type_to_warp(v) for k, v in input_types.items()}
         self.export = export
         self.doc = doc
         self.__doc__ = doc
@@ -409,7 +415,7 @@ class Function:
                     simple = False
                     break
             if simple:
-                # Inline mangle() to avoid method call overhead (~2270 calls)
+                # Inline mangle() to avoid method call overhead
                 if export_func is not None:
                     func_args = export_func(self.input_types)
                 else:
@@ -1971,6 +1977,7 @@ def add_builtin(
                     native_func=native_func,
                     defaults=defaults,
                     require_original_output_arg=require_original_output_arg,
+                    _types_already_resolved=True,
                 )
                 if key in builtin_functions:
                     builtin_functions[key].add_overload(concrete_func)
