@@ -7621,11 +7621,13 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     cached_bounds = kernel._fast_bounds
     if cached_bounds is not None and (cached_bounds[0] is dim or cached_bounds[0] == dim):
         bounds = cached_bounds[1]
+        bounds_changed = False
     else:
         bounds = launch_bounds_t(dim)
         if bounds.size == 0:
             return
         kernel._fast_bounds = (dim, bounds)
+        bounds_changed = True
 
     # Get or build cached packers + pre-allocated refs array
     packers = kernel._fast_packers
@@ -7651,20 +7653,22 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     input_ids = kernel._fast_input_ids
     kparams = kernel._fast_kparams
     refs = kernel._fast_refs
+    npackers = len(packers)
 
-    # Always update bounds slot (bounds object may have changed)
-    refs[0] = bounds
-    kparams[0] = _addressof(bounds)
+    # Only update bounds slot when dim changed (saves _addressof call on hot path)
+    if bounds_changed:
+        refs[0] = bounds
+        kparams[0] = _addressof(bounds)
 
     # Check if inputs changed by identity
     repack = False
-    for i in range(len(packers)):
+    for i in range(npackers):
         if input_ids[i] is not inputs[i]:
             repack = True
             break
 
     if repack:
-        for i in range(len(packers)):
+        for i in range(npackers):
             packed = packers[i](inputs[i])
             refs[i + 1] = packed
             kparams[i + 1] = _addressof(packed)
