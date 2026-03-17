@@ -863,6 +863,7 @@ class Kernel:
         self._launch_hooks = None
         self._launch_device = None
         self._launch_module_exec = None
+        self._fast_nargs = 0
 
         if self.module:
             self.module.register_kernel(self)
@@ -7599,12 +7600,13 @@ def launch(
         and not record_cmd
         and not outputs
     ):
-        device = runtime.get_device(device)
+        # Inline device resolution: skip get_device() method call for None
+        device = runtime.default_device if device is None else runtime.get_device(device)
         if (
             kernel._launch_device is device
             and not runtime.tape
             and not warp.config.print_launches
-            and len(inputs) == len(kernel.adj.args)
+            and len(inputs) == kernel._fast_nargs
         ):
             _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim)
             return
@@ -7634,7 +7636,7 @@ def launch(
         and kernel._launch_device is device
     ):
         fwd_args = inputs if not outputs else list(inputs) + list(outputs)
-        if len(fwd_args) == len(kernel.adj.args):
+        if len(fwd_args) == kernel._fast_nargs:
             _launch_cuda_fast(kernel, dim, fwd_args, device, max_blocks, block_dim)
             return
 
@@ -7684,6 +7686,7 @@ def launch(
             kernel._launch_hooks = hooks
             kernel._launch_module_exec = module_exec
             kernel._launch_device = device
+            kernel._fast_nargs = len(kernel.adj.args)
 
         # Pack all params: bounds + forward args + adjoint args
         adj_args_list = kernel.adj.args
