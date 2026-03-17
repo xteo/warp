@@ -7301,6 +7301,9 @@ def _build_fast_packers(kernel, device):
     return packers
 
 
+_addressof = ctypes.addressof
+
+
 def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     """Fast path for common CUDA forward launches: no tape, no adjoint, no record_cmd, no generics."""
     # construct launch bounds
@@ -7308,24 +7311,24 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     if bounds.size == 0:
         return
 
-    # Get or build cached packers
+    # Get or build cached packers + pre-allocated refs array
     packers = kernel._fast_packers
     if packers is None:
         packers = _build_fast_packers(kernel, device)
         kernel._fast_packers = packers
         n = 1 + len(packers)
         kernel._fast_kparams = (ctypes.c_void_p * n)()
+        kernel._fast_refs = [None] * n
 
-    # Pack args using cached packers, reuse pre-allocated kernel_params array
+    # Pack args using cached packers, reuse pre-allocated arrays
     kparams = kernel._fast_kparams
-    nargs = len(packers)
-    refs = [None] * (1 + nargs)
+    refs = kernel._fast_refs
     refs[0] = bounds
-    kparams[0] = ctypes.c_void_p(ctypes.addressof(bounds))
-    for i in range(nargs):
+    kparams[0] = _addressof(bounds)
+    for i in range(len(packers)):
         packed = packers[i](inputs[i])
         refs[i + 1] = packed
-        kparams[i + 1] = ctypes.c_void_p(ctypes.addressof(packed))
+        kparams[i + 1] = _addressof(packed)
 
     stream = device.stream
     hooks = kernel._launch_hooks
