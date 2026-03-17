@@ -2500,6 +2500,10 @@ class Module:
         # Indicates whether the module has functions or kernels with unresolved static expressions.
         self.has_unresolved_static_expressions = False
 
+        # Deferred reference scanning: store adjoint owners to avoid
+        # triggering ast.parse during import. Resolved on first hash/load.
+        self._pending_refs = []
+
         self.options = {
             "max_unroll": warp.config.max_unroll,
             "enable_backward": warp.config.enable_backward,
@@ -2549,11 +2553,8 @@ class Module:
         # track all kernel objects, even if they are duplicates
         self._live_kernels.add(kernel)
 
-        # Check for unresolved static expressions in the kernel.
-        if kernel.adj.has_unresolved_static_expressions:
-            self.has_unresolved_static_expressions = True
-
-        self._find_references(kernel.adj)
+        # Defer adj access (ast.parse + source extraction) until compile time
+        self._pending_refs.append(kernel)
 
         # for a reload of module on next launch
         self.mark_modified()
@@ -2612,11 +2613,8 @@ class Module:
                                 del func_existing.user_overloads[k]
                 func_existing.add_overload(func)
 
-        # Check for unresolved static expressions in the function.
-        if func.adj.has_unresolved_static_expressions:
-            self.has_unresolved_static_expressions = True
-
-        self._find_references(func.adj)
+        # Defer adj access (ast.parse + source extraction) until compile time
+        self._pending_refs.append(func)
 
         # for a reload of module on next launch
         self.mark_modified()
@@ -2668,11 +2666,28 @@ class Module:
             if isinstance(arg.type, warp._src.codegen.Struct) and arg.type.module is not None:
                 add_ref(arg.type.module)
 
+    def _resolve_pending_references(self):
+        """Flush deferred reference scanning.
+
+        Called before hashing or loading to ensure the dependency graph is
+        complete. This triggers Adjoint creation (ast.parse) for any kernels
+        or functions that were registered since the last call.
+        """
+        pending = self._pending_refs
+        if not pending:
+            return
+        self._pending_refs = []
+        for obj in pending:
+            if obj.adj.has_unresolved_static_expressions:
+                self.has_unresolved_static_expressions = True
+            self._find_references(obj.adj)
+
     def hash_module(self) -> bytes:
         """Get the hash of the module for the current block_dim.
 
         This function always creates a new `ModuleHasher` instance and computes the hash.
         """
+        self._resolve_pending_references()
         # compute latest hash
         block_dim = self.options["block_dim"]
         self.hashers[block_dim] = ModuleHasher(self)
@@ -2683,6 +2698,8 @@ class Module:
 
         If a hash has not been computed for the current block_dim, it will be computed and cached.
         """
+        self._resolve_pending_references()
+
         if block_dim is None:
             block_dim = self.options["block_dim"]
 
