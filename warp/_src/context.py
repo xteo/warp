@@ -153,6 +153,25 @@ class Function:
     Functions can be called from kernels or other Warp functions.
     """
 
+    def __getattr__(self, name):
+        if name == "adj" and self._adj is None and self._adj_kwargs is not None:
+            kw = self._adj_kwargs
+            self._adj = warp._src.codegen.Adjoint(
+                kw["func"],
+                source=kw["source"],
+                is_user_function=kw["is_user_function"],
+                skip_forward_codegen=kw["skip_forward_codegen"],
+                skip_reverse_codegen=kw["skip_reverse_codegen"],
+                custom_reverse_num_input_args=kw["custom_reverse_num_input_args"],
+                custom_reverse_mode=kw["custom_reverse_mode"],
+                overload_annotations=kw["overload_annotations"],
+                transformers=kw["transformers"],
+            )
+            self._adj_kwargs = None  # free memory
+            self.adj = self._adj  # cache in instance dict for fast subsequent access
+            return self._adj
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
     def __init__(
         self,
         func: Callable | None,
@@ -251,9 +270,11 @@ class Function:
             self.user_templates: dict[str, Function] = {}
             self.user_overloads: dict[str, Function] = {}
 
-            # user defined (Python) function
-            self.adj = warp._src.codegen.Adjoint(
-                func,
+            # Defer Adjoint creation to compile time (saves ~39ms during import
+            # by avoiding ast.parse and source extraction for 34 @wp.func functions)
+            self._adj = None
+            self._adj_kwargs = dict(
+                func=func,
                 source=source,
                 is_user_function=True,
                 skip_forward_codegen=skip_forward_codegen,
@@ -264,8 +285,16 @@ class Function:
                 transformers=code_transformers,
             )
 
+            # Extract arg_types directly from function annotations
+            # (avoids creating Adjoint just to read annotations)
+            argspec = warp._src.codegen.get_full_arg_spec(func)
+            if overloaded_annotations is None:
+                arg_types = {k: v for k, v in argspec.annotations.items() if not (k == "return" and v is None)}
+            else:
+                arg_types = overloaded_annotations.copy()
+
             # record input types
-            for name, type in self.adj.arg_types.items():
+            for name, type in arg_types.items():
                 if name == "return":
                     self.value_func = create_value_func(type)
 
@@ -279,6 +308,8 @@ class Function:
 
         else:
             # builtin function
+            self._adj = None
+            self._adj_kwargs = None
 
             # embedded linked list of all overloads
             # the builtin_functions dictionary holds the list head for a given key (func name)
