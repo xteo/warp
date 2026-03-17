@@ -8863,8 +8863,28 @@ SUPPORTED_ATOMIC_TYPES = (
 
 
 def atomic_op_constraint(arg_types: Mapping[str, Any]):
-    idx_types = tuple(arg_types[x] for x in "ijkl" if arg_types.get(x, None) is not None)
-    return all(types_equal(idx_types[0], t) for t in idx_types[1:]) and arg_types["arr"].ndim == len(idx_types)
+    # Inline index type extraction for speed (1440 calls during import)
+    i_t = arg_types.get("i")
+    j_t = arg_types.get("j")
+    k_t = arg_types.get("k")
+    l_t = arg_types.get("l")
+    if l_t is not None:
+        ndim = 4
+        if not (i_t is j_t and j_t is k_t and k_t is l_t):
+            return False
+    elif k_t is not None:
+        ndim = 3
+        if not (i_t is j_t and j_t is k_t):
+            return False
+    elif j_t is not None:
+        ndim = 2
+        if not (i_t is j_t):
+            return False
+    elif i_t is not None:
+        ndim = 1
+    else:
+        return False
+    return arg_types["arr"].ndim == ndim
 
 
 def create_atomic_op_value_func(op: str):
