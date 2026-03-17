@@ -7330,40 +7330,23 @@ def launch(
     bounds = launch_bounds_t(dim)
 
     if bounds.size > 0:
-        # first param is the number of threads
-        params = []
-        params.append(bounds)
+        # compute total forward args count without creating intermediate list
+        n_inputs = len(inputs)
+        n_outputs = len(outputs)
+        n_fwd = n_inputs + n_outputs
 
-        # converts arguments to kernel's expected ctypes and packs into params
-        def pack_args(args, params, adjoint=False):
-            for i, a in enumerate(args):
-                arg_type = kernel.adj.args[i].type
-                arg_name = kernel.adj.args[i].label
-
-                params.append(pack_arg(kernel, arg_type, arg_name, a, device, adjoint))
-
-        fwd_args = []
-        fwd_args.extend(inputs)
-        fwd_args.extend(outputs)
-
-        adj_args = []
-        adj_args.extend(adj_inputs)
-        adj_args.extend(adj_outputs)
-
-        if (len(fwd_args)) != (len(kernel.adj.args)):
+        if n_fwd != len(kernel.adj.args):
             raise RuntimeError(
-                f"Error launching kernel '{kernel.key}', passed {len(fwd_args)} arguments but kernel requires {len(kernel.adj.args)}."
+                f"Error launching kernel '{kernel.key}', passed {n_fwd} arguments but kernel requires {len(kernel.adj.args)}."
             )
 
         # if it's a generic kernel, infer the required overload from the arguments
         if kernel.is_generic:
+            fwd_args = list(inputs) + list(outputs) if n_outputs else list(inputs)
             fwd_types = kernel.infer_argument_types(fwd_args)
             kernel = kernel.add_overload(fwd_types)
 
         # For unique module kernels, reset skip_build to allow compilation attempts on different devices.
-        # Even though a Module compiles separately for each device (stored in Module.execs),
-        # the skip_build flag is on the Adjoint which is shared across devices.
-        # A failure on one device shouldn't prevent compilation attempts on other devices.
         if kernel.is_unique_module:
             kernel.adj.skip_build = False
 
@@ -7380,8 +7363,17 @@ def launch(
         # late bind
         hooks = module_exec.get_kernel_hooks(kernel)
 
-        pack_args(fwd_args, params, adjoint=False)
-        pack_args(adj_args, params, adjoint=True)
+        # Pack all params: bounds + forward args + adjoint args
+        adj_args_list = kernel.adj.args
+        params = [bounds]
+        for i in range(n_inputs):
+            params.append(pack_arg(kernel, adj_args_list[i].type, adj_args_list[i].label, inputs[i], device, False))
+        for i in range(n_outputs):
+            params.append(pack_arg(kernel, adj_args_list[n_inputs + i].type, adj_args_list[n_inputs + i].label, outputs[i], device, False))
+        for i in range(len(adj_inputs)):
+            params.append(pack_arg(kernel, adj_args_list[i].type, adj_args_list[i].label, adj_inputs[i], device, True))
+        for i in range(len(adj_outputs)):
+            params.append(pack_arg(kernel, adj_args_list[len(adj_inputs) + i].type, adj_args_list[len(adj_inputs) + i].label, adj_outputs[i], device, True))
 
         # run kernel
         if device.is_cpu:
@@ -7506,6 +7498,7 @@ def launch(
 
         # detect illegal inter-kernel read/write access patterns if verification flag is set
         if warp.config.verify_autograd_array_access:
+            fwd_args = list(inputs) + list(outputs)
             runtime.tape._check_kernel_array_access(kernel, fwd_args)
 
 
