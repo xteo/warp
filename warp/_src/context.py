@@ -339,6 +339,81 @@ class Function:
                 scope_locals = inspect.currentframe().f_back.f_locals
             module.register_function(self, scope_locals, skip_adding_overload)
 
+    @classmethod
+    def _create_concrete_builtin(
+        cls,
+        key,
+        namespace,
+        input_types,
+        value_type,
+        value_func,
+        export_func,
+        dispatch_func,
+        lto_dispatch_func,
+        variadic,
+        initializer_list_func,
+        export,
+        doc,
+        group,
+        skip_replay,
+        is_differentiable,
+        native_func,
+        defaults,
+        require_original_output_arg,
+    ):
+        """Fast-path constructor for concrete builtin overloads.
+
+        Bypasses the full __init__ to reduce per-overload creation cost
+        (~3400 calls during import).
+        """
+        self = cls.__new__(cls)
+        self.func = None
+        self.key = key
+        self.namespace = namespace
+        self.value_type = value_type
+        self.value_func = value_func
+        self.export_func = export_func
+        self.dispatch_func = dispatch_func
+        self.lto_dispatch_func = lto_dispatch_func
+        self.input_types = {k: warp._src.types.type_to_warp(v) for k, v in input_types.items()}
+        self.export = export
+        self.doc = doc
+        self.__doc__ = doc
+        self.group = group
+        self.module = None
+        self.variadic = variadic
+        self.defaults = {} if defaults is None else defaults
+        self.custom_replay_func = None
+        self.native_snippet = None
+        self.adj_native_snippet = None
+        self.replay_snippet = None
+        self.custom_grad_func = None
+        self.require_original_output_arg = require_original_output_arg
+        self.generic_parent = None
+        self.initializer_list_func = (
+            initializer_list_func if initializer_list_func is not None else _default_initializer_list_func
+        )
+        self.hidden = True
+        self.skip_replay = skip_replay
+        self.is_differentiable = is_differentiable
+        self.generic = False
+        self.native_func = native_func if native_func is not None else key
+        if export and not variadic:
+            simple = True
+            for v in self.input_types.values():
+                if warp._src.types.is_array(v) or v in complex_type_hints:
+                    simple = False
+                    break
+            self.mangled_name = self.mangle() if simple else None
+        else:
+            self.mangled_name = None
+        self._adj = None
+        self._adj_kwargs = None
+        self.overloads = [self]
+        self._signature = None
+        return self
+
+
     @property
     def signature(self):
         """Lazily build inspect.Signature on first access."""
@@ -1795,8 +1870,7 @@ def add_builtin(
                     # replicate the default value_func wrapper from add_builtin
                     _rt = return_type
                     concrete_vf = lambda arg_types, arg_values, _r=_rt: _r
-                concrete_func = Function(
-                    func=None,
+                concrete_func = Function._create_concrete_builtin(
                     key=key,
                     namespace=namespace,
                     input_types=concrete_arg_types,
@@ -1810,10 +1884,8 @@ def add_builtin(
                     export=export,
                     doc=doc,
                     group=group,
-                    hidden=True,
                     skip_replay=skip_replay,
                     is_differentiable=is_differentiable,
-                    generic=False,
                     native_func=native_func,
                     defaults=defaults,
                     require_original_output_arg=require_original_output_arg,
