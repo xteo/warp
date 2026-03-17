@@ -408,7 +408,15 @@ class Function:
                 if warp._src.types.is_array(v) or v in complex_type_hints:
                     simple = False
                     break
-            self.mangled_name = self.mangle() if simple else None
+            if simple:
+                # Inline mangle() to avoid method call overhead (~2270 calls)
+                if export_func is not None:
+                    func_args = export_func(self.input_types)
+                else:
+                    func_args = self.input_types
+                self.mangled_name = "_".join(["wp_builtin_" + key, *(t.__name__ for t in func_args.values())])
+            else:
+                self.mangled_name = None
         else:
             self.mangled_name = None
         self._adj = None
@@ -1821,20 +1829,17 @@ def add_builtin(
     else:
         func_arg_types = input_types
 
-    generic = False
-    for x in func_arg_types.values():
-        if warp._src.types.type_is_generic(x):
-            generic = True
-            break
+    generic = any(warp._src.types.type_is_generic(x) for x in func_arg_types.values())
 
     if generic and export:
         # collect the parent type names of all the generic arguments:
+        _generic_scalar_set = warp._src.types._generic_scalar_types
         genericset = set()
         for t in func_arg_types.values():
-            if warp._src.types.type_is_composite(t):
-                genericset.add(t._wp_generic_type_hint_)
-            elif warp._src.types.type_is_generic_scalar(t):
+            if t in _generic_scalar_set:
                 genericset.add(t)
+            elif hasattr(t, "_wp_generic_type_hint_"):
+                genericset.add(t._wp_generic_type_hint_)
 
         # for each of those type names, get a list of all hard coded types derived
         # from them:
@@ -1863,6 +1868,21 @@ def add_builtin(
             scalartypes = sorted(scalartypes, key=str)
             _sorted_scalartypes_cache[scalartypes_key] = scalartypes
 
+        # Pre-classify parameters once (avoids repeated type_is_generic_scalar/type_is_composite
+        # calls in the inner loop — these were called 10K+ and 8K+ times respectively)
+        _type_is_generic_scalar = warp._src.types.type_is_generic_scalar
+        _type_is_composite = warp._src.types.type_is_composite
+        _types_equal_generic = warp._src.types.types_equal_generic
+        # 0 = generic scalar, 1 = composite (with hint), 2 = fixed
+        param_classify = []
+        for param in input_types.values():
+            if _type_is_generic_scalar(param):
+                param_classify.append((0, param, None))
+            elif _type_is_composite(param):
+                param_classify.append((1, param, param._wp_generic_type_hint_))
+            else:
+                param_classify.append((2, param, None))
+
         # generate function calls for each of these scalar types:
         for stype in scalartypes:
             # find concrete types for this scalar type (eg if the scalar type is float32
@@ -1873,14 +1893,14 @@ def add_builtin(
             # gotta try generating function calls for all combinations of these argument types
             # now.
             typelists = []
-            for param in input_types.values():
-                if warp._src.types.type_is_generic_scalar(param):
+            for kind, param, hint in param_classify:
+                if kind == 0:
                     l = (stype,)
-                elif warp._src.types.type_is_composite(param):
+                elif kind == 1:
                     l = tuple(
                         x
-                        for x in consistenttypes[param._wp_generic_type_hint_]
-                        if warp._src.types.types_equal_generic(param, x)
+                        for x in consistenttypes[hint]
+                        if _types_equal_generic(param, x)
                     )
                 else:
                     l = (param,)
