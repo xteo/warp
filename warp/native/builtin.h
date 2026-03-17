@@ -1539,6 +1539,37 @@ template <> inline CUDA_CALLABLE float atomic_add(float* buf, float value)
 #endif
 }
 
+// Specialization for int32 with warp-level reduction (same pattern as float32).
+template <> inline CUDA_CALLABLE int atomic_add(int* buf, int value)
+{
+#if !defined(__CUDA_ARCH__)
+    int old = buf[0];
+    buf[0] += value;
+    return old;
+#elif __CUDA_ARCH__ >= 700
+    unsigned mask = __activemask();
+    if (mask == 0xFFFFFFFFu)
+    {
+        unsigned peers = __match_any_sync(mask, (unsigned long long)buf);
+        if (peers == 0xFFFFFFFFu)
+        {
+            for (int offset = 16; offset > 0; offset >>= 1)
+            {
+                value += __shfl_down_sync(0xFFFFFFFFu, value, offset);
+            }
+            if ((threadIdx.x & 31) == 0)
+            {
+                return atomicAdd(buf, value);
+            }
+            return 0;
+        }
+    }
+    return atomicAdd(buf, value);
+#else
+    return atomicAdd(buf, value);
+#endif
+}
+
 template <> inline CUDA_CALLABLE int64 atomic_add(int64* buf, int64 value)
 {
 #if !defined(__CUDA_ARCH__)
