@@ -463,7 +463,7 @@ from . import utils as utils
 # category: Misc
 
 from warp._src.math import *
-from warp._src.marching_cubes import MarchingCubes as MarchingCubes
+# MarchingCubes deferred to __getattr__ to save ~5ms import time
 from warp._src.context import RegisteredGLBuffer as RegisteredGLBuffer
 
 
@@ -479,6 +479,12 @@ from warp._src import types as _types
 
 
 def __getattr__(name):
+    if name == "MarchingCubes":
+        from warp._src.marching_cubes import MarchingCubes  # noqa: PLC0415
+
+        globals()["MarchingCubes"] = MarchingCubes  # cache for subsequent access
+        return MarchingCubes
+
     from warp._src.utils import get_deprecated_api  # noqa: PLC0415
 
     if name == "mat":
