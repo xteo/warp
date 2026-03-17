@@ -3106,7 +3106,6 @@ class Module:
 
                 # Check if we can reuse a previously compiled binary
                 if os.path.exists(content_cache_path):
-                    import shutil
                     final_output_path = os.path.join(output_dir, output_name)
                     os.makedirs(output_dir, exist_ok=True)
                     shutil.copy2(content_cache_path, final_output_path)
@@ -3186,7 +3185,6 @@ class Module:
                 try:
                     os.makedirs(content_cache_dir, exist_ok=True)
                     if not os.path.exists(content_cache_path):
-                        import shutil
                         shutil.copy2(binary_path, content_cache_path)
                         if warp.config.verbose:
                             print(f"[NVRTC Cache] Stored compiled binary with content hash {content_hash[:8]}")
