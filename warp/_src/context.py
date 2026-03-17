@@ -114,6 +114,10 @@ def get_function_args(func):
 complex_type_hints = (Any, Callable, tuple)
 sequence_types = (list, tuple)
 
+
+def _default_initializer_list_func(args, return_type):
+    return False
+
 function_key_counts: dict[str, int] = {}
 
 
@@ -239,7 +243,7 @@ class Function:
         self.generic_parent = None  # generic function that was used to instantiate this overload
 
         if initializer_list_func is None:
-            self.initializer_list_func = lambda x, y: False
+            self.initializer_list_func = _default_initializer_list_func
         else:
             self.initializer_list_func = (
                 initializer_list_func  # True if the arguments should be emitted as an initializer list in the c++ code
@@ -1767,9 +1771,7 @@ def add_builtin(
             return value_type
 
     if initializer_list_func is None:
-
-        def initializer_list_func(args, return_type):
-            return False
+        initializer_list_func = _default_initializer_list_func
 
     if defaults is None:
         defaults = {}
