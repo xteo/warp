@@ -29,6 +29,12 @@ element methods, and :mod:`warp.sparse` for sparse linear algebra.
 
 # isort: skip_file
 
+# Temporarily replace inspect.cleandoc with identity function during import
+# to avoid ~90ms of docstring cleaning overhead from numpy's class definitions.
+import inspect as _inspect
+_orig_cleandoc = _inspect.cleandoc
+_inspect.cleandoc = lambda doc: doc
+
 # category: Type Annotations
 
 from warp._src.types import Int as Int
@@ -463,6 +469,9 @@ from warp._src.context import RegisteredGLBuffer as RegisteredGLBuffer
 
 __version__ = config.version
 
+# Restore inspect.cleandoc after all module-level imports are done.
+_inspect.cleandoc = _orig_cleandoc
+del _orig_cleandoc, _inspect
 
 # TODO: Remove after cleaning up the public API.
 
