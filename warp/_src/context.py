@@ -825,6 +825,8 @@ class Kernel:
 
         # cache for fast launch argument packers (set lazily by _launch_cuda_fast)
         self._fast_packers = None
+        self._fast_bounds = None
+        self._fast_input_ids = None
 
         # fast path launch cache (set by launch() after first successful load)
         self._launch_hooks = None
@@ -7341,10 +7343,15 @@ _addressof = ctypes.addressof
 
 def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     """Fast path for common CUDA forward launches: no tape, no adjoint, no record_cmd, no generics."""
-    # construct launch bounds
-    bounds = launch_bounds_t(dim)
-    if bounds.size == 0:
-        return
+    # --- Bounds: cache for repeated dims ---
+    cached_bounds = kernel._fast_bounds
+    if cached_bounds is not None and (cached_bounds[0] is dim or cached_bounds[0] == dim):
+        bounds = cached_bounds[1]
+    else:
+        bounds = launch_bounds_t(dim)
+        if bounds.size == 0:
+            return
+        kernel._fast_bounds = (dim, bounds)
 
     # Get or build cached packers + pre-allocated refs array
     packers = kernel._fast_packers
@@ -7354,16 +7361,30 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
         n = 1 + len(packers)
         kernel._fast_kparams = (ctypes.c_void_p * n)()
         kernel._fast_refs = [None] * n
+        kernel._fast_input_ids = [None] * len(packers)
 
-    # Pack args using cached packers, reuse pre-allocated arrays
+    # --- Args: skip packing if all inputs are the same objects ---
+    input_ids = kernel._fast_input_ids
     kparams = kernel._fast_kparams
     refs = kernel._fast_refs
+
+    # Always update bounds slot (bounds object may have changed)
     refs[0] = bounds
     kparams[0] = _addressof(bounds)
+
+    # Check if inputs changed by identity
+    repack = False
     for i in range(len(packers)):
-        packed = packers[i](inputs[i])
-        refs[i + 1] = packed
-        kparams[i + 1] = _addressof(packed)
+        if input_ids[i] is not inputs[i]:
+            repack = True
+            break
+
+    if repack:
+        for i in range(len(packers)):
+            packed = packers[i](inputs[i])
+            refs[i + 1] = packed
+            kparams[i + 1] = _addressof(packed)
+            input_ids[i] = inputs[i]
 
     stream = device.stream
     hooks = kernel._launch_hooks
