@@ -822,6 +822,14 @@ class Kernel:
         # cache for invoke() struct types (avoids dynamic type() calls)
         self._invoke_cache = {}
 
+        # cache for fast launch argument packers (set lazily by _launch_cuda_fast)
+        self._fast_packers = None
+
+        # fast path launch cache (set by launch() after first successful load)
+        self._launch_hooks = None
+        self._launch_device = None
+        self._launch_module_exec = None
+
         if self.module:
             self.module.register_kernel(self)
 
@@ -7272,6 +7280,27 @@ class Launch:
                 )
 
 
+def _build_fast_packers(kernel, device):
+    """Build a list of fast packer callables for each kernel argument."""
+    packers = []
+    for arg in kernel.adj.args:
+        arg_type = arg.type
+        if warp._src.types.is_array(arg_type):
+            packers.append(lambda v: v.__ctype__())
+        elif arg_type is warp._src.types.float16:
+            _type = arg_type._type_
+            _f2h = warp._src.types.float_to_half_bits
+            packers.append(lambda v, _t=_type, _f=_f2h: _t(_f(v)))
+        elif issubclass(arg_type, ctypes.Array):
+            packers.append(lambda v: v)
+        elif issubclass(arg_type, ctypes.Structure):
+            packers.append(lambda v: v)
+        else:
+            _type = arg_type._type_
+            packers.append(lambda v, _t=_type: _t(v))
+    return packers
+
+
 def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     """Fast path for common CUDA forward launches: no tape, no adjoint, no record_cmd, no generics."""
     # construct launch bounds
@@ -7279,23 +7308,30 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
     if bounds.size == 0:
         return
 
-    # build params list: bounds + packed args
-    adj_args = kernel.adj.args
-    nargs = len(adj_args)
-    params = [None] * (1 + nargs)
-    params[0] = bounds
-    for i in range(nargs):
-        params[i + 1] = pack_arg(kernel, adj_args[i].type, adj_args[i].label, inputs[i], device, False)
+    # Get or build cached packers
+    packers = kernel._fast_packers
+    if packers is None:
+        packers = _build_fast_packers(kernel, device)
+        kernel._fast_packers = packers
+        n = 1 + len(packers)
+        kernel._fast_kparams = (ctypes.c_void_p * n)()
 
-    # build ctypes kernel_params array
-    n = len(params)
-    kernel_params = (ctypes.c_void_p * n)(*(ctypes.c_void_p(ctypes.addressof(x)) for x in params))
+    # Pack args using cached packers, reuse pre-allocated kernel_params array
+    kparams = kernel._fast_kparams
+    nargs = len(packers)
+    refs = [None] * (1 + nargs)
+    refs[0] = bounds
+    kparams[0] = ctypes.c_void_p(ctypes.addressof(bounds))
+    for i in range(nargs):
+        packed = packers[i](inputs[i])
+        refs[i + 1] = packed
+        kparams[i + 1] = ctypes.c_void_p(ctypes.addressof(packed))
 
     stream = device.stream
     hooks = kernel._launch_hooks
 
-    # If the stream is capturing, we retain the CUDA module so that it doesn't get unloaded
-    if len(runtime.captures) > 0 and runtime.core.wp_cuda_stream_is_capturing(stream.cuda_stream):
+    # Graph capture check — use truthiness instead of len() for speed
+    if runtime.captures and runtime.core.wp_cuda_stream_is_capturing(stream.cuda_stream):
         capture_id = runtime.core.wp_cuda_stream_get_capture_id(stream.cuda_stream)
         graph = runtime.captures.get(capture_id)
         if graph is not None:
@@ -7308,16 +7344,9 @@ def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
         max_blocks,
         block_dim,
         hooks.forward_smem_bytes,
-        kernel_params,
+        kparams,
         stream.cuda_stream,
     )
-
-    if warp.config.verify_cuda:
-        try:
-            runtime.verify_cuda_device(device)
-        except Exception as e:
-            print(f"Error launching kernel: {kernel.key} on device {device}")
-            raise e
 
 
 def launch(
@@ -7361,7 +7390,9 @@ def launch(
         block_dim: The number of threads per block (always 1 for "cpu" devices).
     """
 
-    init()
+    # init() is a no-op if already initialized; inline the check for speed
+    if runtime is None:
+        init()
 
     # if stream is specified, use the associated device
     if stream is not None:
@@ -7384,7 +7415,7 @@ def launch(
         and device.is_cuda
         and not runtime.tape
         and not warp.config.print_launches
-        and hasattr(kernel, "_launch_hooks")
+        and kernel._launch_hooks is not None
         and kernel._launch_device is device
     ):
         fwd_args = inputs if not outputs else list(inputs) + list(outputs)
