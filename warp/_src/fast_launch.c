@@ -89,9 +89,9 @@ fast_launch_launch(PyObject* self, PyObject* const* fastargs, Py_ssize_t nargs)
     if (PyErr_Occurred())
         return NULL;
 
-    size_t result = g_launch_fn(context, kernel, dim, max_blocks, block_dim, smem_bytes, kparams, stream);
+    g_launch_fn(context, kernel, dim, max_blocks, block_dim, smem_bytes, kparams, stream);
 
-    return PyLong_FromSize_t(result);
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef FastLaunchMethods[] = {
