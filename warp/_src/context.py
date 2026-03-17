@@ -7266,6 +7266,54 @@ class Launch:
                 )
 
 
+def _launch_cuda_fast(kernel, dim, inputs, device, max_blocks, block_dim):
+    """Fast path for common CUDA forward launches: no tape, no adjoint, no record_cmd, no generics."""
+    # construct launch bounds
+    bounds = launch_bounds_t(dim)
+    if bounds.size == 0:
+        return
+
+    # build params list: bounds + packed args
+    adj_args = kernel.adj.args
+    nargs = len(adj_args)
+    params = [None] * (1 + nargs)
+    params[0] = bounds
+    for i in range(nargs):
+        params[i + 1] = pack_arg(kernel, adj_args[i].type, adj_args[i].label, inputs[i], device, False)
+
+    # build ctypes kernel_params array
+    n = len(params)
+    kernel_params = (ctypes.c_void_p * n)(*(ctypes.c_void_p(ctypes.addressof(x)) for x in params))
+
+    stream = device.stream
+    hooks = kernel._launch_hooks
+
+    # If the stream is capturing, we retain the CUDA module so that it doesn't get unloaded
+    if len(runtime.captures) > 0 and runtime.core.wp_cuda_stream_is_capturing(stream.cuda_stream):
+        capture_id = runtime.core.wp_cuda_stream_get_capture_id(stream.cuda_stream)
+        graph = runtime.captures.get(capture_id)
+        if graph is not None:
+            graph.retain_module_exec(kernel._launch_module_exec)
+
+    runtime.core.wp_cuda_launch_kernel(
+        device.context,
+        hooks.forward,
+        bounds.size,
+        max_blocks,
+        block_dim,
+        hooks.forward_smem_bytes,
+        kernel_params,
+        stream.cuda_stream,
+    )
+
+    if warp.config.verify_cuda:
+        try:
+            runtime.verify_cuda_device(device)
+        except Exception as e:
+            print(f"Error launching kernel: {kernel.key} on device {device}")
+            raise e
+
+
 def launch(
     kernel,
     dim: int | Sequence[int],
@@ -7321,6 +7369,22 @@ def launch(
     # check function is a Kernel
     if not isinstance(kernel, Kernel):
         raise RuntimeError("Error launching kernel, can only launch functions decorated with @wp.kernel.")
+
+    # Fast path: non-generic CUDA forward launch, no tape, no adjoint, no record_cmd, already loaded
+    if (
+        not adjoint
+        and not record_cmd
+        and not kernel.is_generic
+        and device.is_cuda
+        and not runtime.tape
+        and not warp.config.print_launches
+        and hasattr(kernel, "_launch_hooks")
+        and kernel._launch_device is device
+    ):
+        fwd_args = inputs if not outputs else list(inputs) + list(outputs)
+        if len(fwd_args) == len(kernel.adj.args):
+            _launch_cuda_fast(kernel, dim, fwd_args, device, max_blocks, block_dim)
+            return
 
     # debugging aid
     if warp.config.print_launches:
@@ -7379,6 +7443,12 @@ def launch(
 
         # late bind
         hooks = module_exec.get_kernel_hooks(kernel)
+
+        # Cache hooks and module_exec for fast path on subsequent launches
+        if not kernel.is_generic and device.is_cuda and not adjoint:
+            kernel._launch_hooks = hooks
+            kernel._launch_module_exec = module_exec
+            kernel._launch_device = device
 
         pack_args(fwd_args, params, adjoint=False)
         pack_args(adj_args, params, adjoint=True)
