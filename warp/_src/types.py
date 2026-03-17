@@ -3542,6 +3542,28 @@ class array(Array):
         return type_repr(self)
 
     def __getitem__(self, key):
+        # Fast path: single slice on first dimension of a multi-dim array without gradient
+        if isinstance(key, slice) and self.ndim > 1 and self._grad is None:
+            start, stop, step = key.start, key.stop, key.step
+            if start is None:
+                start = 0
+            if stop is None:
+                stop = self.shape[0]
+            if step is None:
+                step = 1
+            if start < 0:
+                start = self.shape[0] + start
+            if stop < 0:
+                stop = self.shape[0] + stop
+            new_dim0 = -((stop - start) // -step)  # ceil division
+            new_shape = (new_dim0,) + self.shape[1:]
+            new_strides = (self.strides[0] * step,) + self.strides[1:]
+            ptr_offset = int(self.strides[0]) * start
+            new_ptr = self.ptr + ptr_offset if self.ptr is not None else None
+            # Contiguity: first dim stride matches only if step == 1
+            is_contig = self.is_contiguous and step == 1
+            return array._fast_view(self, new_ptr, new_shape, new_strides, is_contig)
+
         if isinstance(key, int):
             if self.ndim == 1:
                 raise RuntimeError("Item indexing is not supported on wp.array objects")
@@ -4000,10 +4022,45 @@ class array(Array):
         elif not isinstance(shape, tuple):
             shape = tuple(shape)
 
-        if len(shape) > ARRAY_MAX_DIMS:
+        ndim = len(shape)
+        if ndim > ARRAY_MAX_DIMS:
             raise RuntimeError(
-                f"Arrays may only have {ARRAY_MAX_DIMS} dimensions maximum, trying to create array with {len(shape)} dims."
+                f"Arrays may only have {ARRAY_MAX_DIMS} dimensions maximum, trying to create array with {ndim} dims."
             )
+
+        # Fast path: no -1 dims, no gradient — most common case
+        if -1 not in shape and self._grad is None:
+            size = 1
+            for d in shape:
+                size *= d
+            if size != self.size:
+                raise RuntimeError("Reshaped array must have the same total size as the original.")
+
+            # compute contiguous strides directly as tuple (avoid list alloc)
+            dtype_size = type_size_in_bytes(self.dtype)
+            if ndim == 0:
+                contiguous_strides = ()
+            elif ndim == 1:
+                contiguous_strides = (dtype_size,)
+            elif ndim == 2:
+                s1 = dtype_size
+                s0 = s1 * shape[1]
+                contiguous_strides = (s0, s1)
+            elif ndim == 3:
+                s2 = dtype_size
+                s1 = s2 * shape[2]
+                s0 = s1 * shape[1]
+                contiguous_strides = (s0, s1, s2)
+            else:
+                strides_list = [0] * ndim
+                strides_list[ndim - 1] = dtype_size
+                for i in range(ndim - 2, -1, -1):
+                    strides_list[i] = strides_list[i + 1] * shape[i + 1]
+                contiguous_strides = tuple(strides_list)
+
+            a = array._fast_view(self, self.ptr, shape, contiguous_strides, True)
+            a.size = size
+            return a
 
         # check for -1 dimension and reformat
         if -1 in shape:
@@ -4030,7 +4087,6 @@ class array(Array):
             raise RuntimeError("Reshaped array must have the same total size as the original.")
 
         # compute contiguous strides for new shape
-        ndim = len(shape)
         dtype_size = type_size_in_bytes(self.dtype)
         contiguous_strides = [0] * ndim
         if ndim > 0:
