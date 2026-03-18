@@ -67,15 +67,17 @@ template <typename Type> CUDA_CALLABLE inline int hash_grid_index(const HashGrid
     y = max(0, y);
     z = max(0, z);
 
-    // compute physical cell (assume pow2 grid dims)
-    // int cx = x & (grid.dim_x-1);
-    // int cy = y & (grid.dim_y-1);
-    // int cz = z & (grid.dim_z-1);
-
-    // compute physical cell (arbitrary grid dims)
-    int cx = x % grid.dim_x;
-    int cy = y % grid.dim_y;
-    int cz = z % grid.dim_z;
+    // compute physical cell — use bitwise AND when dims are power-of-2 (avoids integer division)
+    int cx, cy, cz;
+    if ((grid.dim_x & (grid.dim_x - 1)) == 0 && (grid.dim_y & (grid.dim_y - 1)) == 0 && (grid.dim_z & (grid.dim_z - 1)) == 0) {
+        cx = x & (grid.dim_x - 1);
+        cy = y & (grid.dim_y - 1);
+        cz = z & (grid.dim_z - 1);
+    } else {
+        cx = x % grid.dim_x;
+        cy = y % grid.dim_y;
+        cz = z % grid.dim_z;
+    }
 
     return cz * (grid.dim_x * grid.dim_y) + cy * grid.dim_x + cx;
 }
