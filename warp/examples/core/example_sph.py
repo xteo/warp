@@ -318,57 +318,70 @@ class Example:
         grid_size = int(self.height / (4.0 * self.smoothing_length))
         self.grid = wp.HashGrid(grid_size, grid_size, grid_size)
 
+        # CUDA graph for reduced kernel launch overhead
+        self.use_graph = wp.get_device().is_cuda
+        self.graph = None
+        if self.use_graph:
+            self._capture_graph()
+
         # renderer
         self.renderer = None
         if stage_path:
             self.renderer = wp.render.UsdRenderer(stage_path)
 
+    def _launch_force_kernels(self):
+        """Launch force computation, integration, and boundary kernels."""
+        wp.launch(
+            kernel=compute_density,
+            dim=self.n,
+            inputs=[self.grid.id, self.x, self.rho, self.density_normalization, self.smoothing_length],
+        )
+        wp.launch(
+            kernel=get_acceleration,
+            dim=self.n,
+            inputs=[
+                self.grid.id,
+                self.x,
+                self.v,
+                self.rho,
+                self.a,
+                self.isotropic_exp,
+                self.base_density,
+                self.gravity,
+                self.pressure_normalization,
+                self.viscous_normalization,
+                self.smoothing_length,
+            ],
+        )
+        wp.launch(
+            kernel=apply_bounds,
+            dim=self.n,
+            inputs=[self.x, self.v, self.damping_coef, self.width, self.height, self.length],
+        )
+        wp.launch(kernel=kick, dim=self.n, inputs=[self.v, self.a, self.dt])
+        wp.launch(kernel=drift, dim=self.n, inputs=[self.x, self.v, self.dt])
+
+    def _capture_graph(self):
+        """Capture force kernels into a CUDA graph for reduced launch overhead."""
+        if not wp.get_device().is_cuda:
+            return
+        # Pre-build grid so kernel pointers are resolved before capture
+        self.grid.build(self.x, self.smoothing_length)
+        with wp.ScopedCapture() as capture:
+            self._launch_force_kernels()
+        self.graph = capture.graph
+
     def step(self):
         with wp.ScopedTimer("step"):
             for _ in range(self.sim_step_to_frame_ratio):
                 with wp.ScopedTimer("grid build", active=self.verbose):
-                    # build grid
                     self.grid.build(self.x, self.smoothing_length)
 
                 with wp.ScopedTimer("forces", active=self.verbose):
-                    # compute density of points
-                    wp.launch(
-                        kernel=compute_density,
-                        dim=self.n,
-                        inputs=[self.grid.id, self.x, self.rho, self.density_normalization, self.smoothing_length],
-                    )
-
-                    # get new acceleration
-                    wp.launch(
-                        kernel=get_acceleration,
-                        dim=self.n,
-                        inputs=[
-                            self.grid.id,
-                            self.x,
-                            self.v,
-                            self.rho,
-                            self.a,
-                            self.isotropic_exp,
-                            self.base_density,
-                            self.gravity,
-                            self.pressure_normalization,
-                            self.viscous_normalization,
-                            self.smoothing_length,
-                        ],
-                    )
-
-                    # apply bounds
-                    wp.launch(
-                        kernel=apply_bounds,
-                        dim=self.n,
-                        inputs=[self.x, self.v, self.damping_coef, self.width, self.height, self.length],
-                    )
-
-                    # kick
-                    wp.launch(kernel=kick, dim=self.n, inputs=[self.v, self.a, self.dt])
-
-                    # drift
-                    wp.launch(kernel=drift, dim=self.n, inputs=[self.x, self.v, self.dt])
+                    if self.use_graph and self.graph is not None:
+                        wp.capture_launch(self.graph)
+                    else:
+                        self._launch_force_kernels()
 
             self.sim_time += self.frame_dt
 
