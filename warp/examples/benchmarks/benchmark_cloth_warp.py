@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+
 import warp as wp
 
 wp.clear_kernel_cache()
@@ -22,29 +24,25 @@ wp.clear_kernel_cache()
 def eval_springs(
     x: wp.array(dtype=wp.vec3),
     v: wp.array(dtype=wp.vec3),
-    spring_indices: wp.array(dtype=int),
-    spring_rest_lengths: wp.array(dtype=float),
-    spring_stiffness: wp.array(dtype=float),
-    spring_damping: wp.array(dtype=float),
+    spring_indices: wp.array(dtype=wp.vec2i),
+    spring_params: wp.array(dtype=wp.vec3),
     f: wp.array(dtype=wp.vec3),
 ):
     tid = wp.tid()
 
-    i = spring_indices[tid * 2 + 0]
-    j = spring_indices[tid * 2 + 1]
+    idx = spring_indices[tid]
+    i = idx[0]
+    j = idx[1]
 
-    ke = spring_stiffness[tid]
-    kd = spring_damping[tid]
-    rest = spring_rest_lengths[tid]
+    params = spring_params[tid]
+    rest = params[0]
+    ke = params[1]
+    kd = params[2]
 
     xi = x[i]
     xj = x[j]
 
-    vi = v[i]
-    vj = v[j]
-
     xij = xi - xj
-    vij = vi - vj
 
     l = wp.length(xij)
     l_inv = 1.0 / l
@@ -53,7 +51,10 @@ def eval_springs(
     dir = xij * l_inv
 
     c = l - rest
-    dcdt = wp.dot(dir, vij)
+
+    vi = v[i]
+    vj = v[j]
+    dcdt = wp.dot(dir, vi - vj)
 
     # damping based on relative velocity.
     fs = dir * (ke * c + kd * dcdt)
@@ -106,10 +107,14 @@ class WpIntegrator:
             self.velocities = wp.zeros(cloth.num_particles, dtype=wp.vec3)
             self.forces = wp.zeros(cloth.num_particles, dtype=wp.vec3)
 
-            self.spring_indices = wp.from_numpy(cloth.spring_indices, dtype=int)
-            self.spring_lengths = wp.from_numpy(cloth.spring_lengths, dtype=float)
-            self.spring_stiffness = wp.from_numpy(cloth.spring_stiffness, dtype=float)
-            self.spring_damping = wp.from_numpy(cloth.spring_damping, dtype=float)
+            # Pack spring indices as vec2i and params as vec3 to reduce
+            # memory transactions from 6 array reads to 2 per spring
+            indices_packed = cloth.spring_indices.reshape(-1, 2)
+            self.spring_indices = wp.from_numpy(indices_packed, dtype=wp.vec2i)
+            params_packed = np.stack(
+                [cloth.spring_lengths, cloth.spring_stiffness, cloth.spring_damping], axis=1
+            ).astype(np.float32)
+            self.spring_params = wp.from_numpy(params_packed, dtype=wp.vec3)
 
         self.cloth = cloth
 
@@ -124,9 +129,7 @@ class WpIntegrator:
                     self.positions,
                     self.velocities,
                     self.spring_indices,
-                    self.spring_lengths,
-                    self.spring_stiffness,
-                    self.spring_damping,
+                    self.spring_params,
                     self.forces,
                 ],
                 outputs=[],
