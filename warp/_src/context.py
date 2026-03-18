@@ -7279,7 +7279,7 @@ def launch(
     record_tape: bool = True,
     record_cmd: bool = False,
     max_blocks: int = 0,
-    block_dim: int = 0,
+    block_dim: int = 256,
 ):
     """Launch a Warp kernel on the target device
 
@@ -7305,7 +7305,6 @@ def launch(
           Only has an effect for CUDA kernel launches.
           If negative or zero, the maximum hardware value will be used.
         block_dim: The number of threads per block (always 1 for "cpu" devices).
-          If zero, block size is auto-tuned using CUDA occupancy API.
     """
 
     init()
