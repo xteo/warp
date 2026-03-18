@@ -4544,10 +4544,22 @@ size_t wp_cuda_launch_kernel(
     ContextGuard guard(context);
 
     if (block_dim <= 0) {
-#if defined(_DEBUG)
-        fprintf(stderr, "Warp warning: Launch got block_dim %d. Setting to 256.\n", block_dim);
-#endif
-        block_dim = 256;
+        // Auto-tune block size using occupancy API with caching
+        static std::unordered_map<void*, int> occupancy_cache;
+        auto it = occupancy_cache.find(kernel);
+        if (it != occupancy_cache.end()) {
+            block_dim = it->second;
+        } else {
+            int min_grid_size = 0;
+            int opt_block_size = 256;
+            CUresult res = cuOccupancyMaxPotentialBlockSize_f(
+                &min_grid_size, &opt_block_size, (CUfunction)kernel,
+                (size_t)shared_memory_bytes, 0);
+            if (res != CUDA_SUCCESS || opt_block_size <= 0)
+                opt_block_size = 256;
+            occupancy_cache[kernel] = opt_block_size;
+            block_dim = opt_block_size;
+        }
     }
 
     // CUDA specs up to compute capability 9.0 says the max x-dim grid is 2**31-1, so
