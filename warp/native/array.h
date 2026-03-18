@@ -1262,6 +1262,49 @@ template <typename T> inline CUDA_CALLABLE T load(T* address)
     return value;
 }
 
+// Non-coherent load through the read-only texture cache (__ldg).
+// Only safe for arrays that are guaranteed read-only during the entire kernel execution.
+// Must NOT be used for arrays that are also written to (including via atomics) in the same
+// or concurrent kernel. The codegen layer is responsible for calling load_nc() only for
+// arrays that are provably input-only.
+#ifdef __CUDACC__
+
+template <typename T> inline __device__ T load_nc(T* address)
+{
+    // For compound types that are a multiple of float, load component-wise via __ldg
+    constexpr size_t num_floats = sizeof(T) / sizeof(float);
+    if constexpr (sizeof(T) % sizeof(float) == 0 && num_floats > 0 && num_floats <= 16) {
+        T value;
+        const float* src = reinterpret_cast<const float*>(address);
+        float* dst = reinterpret_cast<float*>(&value);
+        for (size_t i = 0; i < num_floats; ++i)
+            dst[i] = __ldg(src + i);
+        return value;
+    } else {
+        return *address;
+    }
+}
+
+// Fundamental type specializations for load_nc
+inline __device__ float load_nc(float* address) { return __ldg(reinterpret_cast<const float*>(address)); }
+inline __device__ double load_nc(double* address) { return __ldg(reinterpret_cast<const double*>(address)); }
+inline __device__ int32_t load_nc(int32_t* address) { return __ldg(reinterpret_cast<const int32_t*>(address)); }
+inline __device__ uint32_t load_nc(uint32_t* address) { return __ldg(reinterpret_cast<const uint32_t*>(address)); }
+inline __device__ int64_t load_nc(int64_t* address) { return __ldg(reinterpret_cast<const int64_t*>(address)); }
+inline __device__ uint64_t load_nc(uint64_t* address) { return __ldg(reinterpret_cast<const uint64_t*>(address)); }
+inline __device__ int16_t load_nc(int16_t* address) { return __ldg(reinterpret_cast<const int16_t*>(address)); }
+inline __device__ uint16_t load_nc(uint16_t* address) { return __ldg(reinterpret_cast<const uint16_t*>(address)); }
+inline __device__ int8_t load_nc(int8_t* address) { return __ldg(reinterpret_cast<const int8_t*>(address)); }
+inline __device__ uint8_t load_nc(uint8_t* address) { return __ldg(reinterpret_cast<const uint8_t*>(address)); }
+
+#else
+// CPU fallback: load_nc is just a regular load
+template <typename T> inline T load_nc(T* address)
+{
+    return *address;
+}
+#endif
+
 // where() overload for array condition - returns a if array.data is non-null, otherwise returns b
 template <typename T1, typename T2> CUDA_CALLABLE inline T2 where(const array_t<T1>& arr, const T2& a, const T2& b)
 {

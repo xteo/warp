@@ -3046,9 +3046,7 @@ class Adjoint:
             ):
                 # handles array loads (where each dimension has an index specified)
                 out = adj.add_builtin_call("address", [target, *indices])
-
-                if warp.config.verify_autograd_array_access:
-                    target.mark_read()
+                target.mark_read()
 
             else:
                 if warp._src.types.matches_array_class(target_type, warp._src.types.array):
@@ -3254,12 +3252,10 @@ class Adjoint:
             if is_array(target_type):
                 adj.add_builtin_call("array_store", [target, *indices, rhs])
 
-                if warp.config.verify_autograd_array_access:
-                    kernel_name = adj.fun_name
-                    filename = adj.filename
-                    lineno = adj.lineno + adj.fun_lineno
-
-                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                kernel_name = adj.fun_name
+                filename = adj.filename
+                lineno = adj.lineno + adj.fun_lineno
+                target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
 
             elif is_tile(target_type):
                 adj.add_builtin_call("assign", [target, *indices, rhs])
@@ -3513,33 +3509,23 @@ class Adjoint:
 
                 if isinstance(node.op, ast.Add):
                     adj.add_builtin_call("atomic_add", [target, *indices, rhs])
-
-                    if warp.config.verify_autograd_array_access:
-                        target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
 
                 elif isinstance(node.op, ast.Sub):
                     adj.add_builtin_call("atomic_sub", [target, *indices, rhs])
-
-                    if warp.config.verify_autograd_array_access:
-                        target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
 
                 elif isinstance(node.op, ast.BitAnd):
                     adj.add_builtin_call("atomic_and", [target, *indices, rhs])
-
-                    if warp.config.verify_autograd_array_access:
-                        target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
 
                 elif isinstance(node.op, ast.BitOr):
                     adj.add_builtin_call("atomic_or", [target, *indices, rhs])
-
-                    if warp.config.verify_autograd_array_access:
-                        target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
 
                 elif isinstance(node.op, ast.BitXor):
                     adj.add_builtin_call("atomic_xor", [target, *indices, rhs])
-
-                    if warp.config.verify_autograd_array_access:
-                        target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
+                    target.mark_write(kernel_name=kernel_name, filename=filename, lineno=lineno)
                 else:
                     if warp.config.verbose:
                         print(f"Warning: in-place op {node.op} is not differentiable")
@@ -4224,6 +4210,7 @@ cuda_kernel_template_forward = """
 {{
 {line_directive}    wp::tile_shared_storage_t tile_mem;
 
+#pragma unroll 1
 {line_directive}    for (size_t _idx = static_cast<size_t>(blockDim.x) * static_cast<size_t>(blockIdx.x) + static_cast<size_t>(threadIdx.x);
 {line_directive}         _idx < dim.size;
 {line_directive}         _idx += static_cast<size_t>(blockDim.x) * static_cast<size_t>(gridDim.x))
@@ -4243,6 +4230,7 @@ cuda_kernel_template_backward = """
 {{
 {line_directive}    wp::tile_shared_storage_t tile_mem;
 
+#pragma unroll 1
 {line_directive}    for (size_t _idx = static_cast<size_t>(blockDim.x) * static_cast<size_t>(blockIdx.x) + static_cast<size_t>(threadIdx.x);
 {line_directive}         _idx < dim.size;
 {line_directive}         _idx += static_cast<size_t>(blockDim.x) * static_cast<size_t>(gridDim.x))
@@ -4518,6 +4506,44 @@ def codegen_func_forward(adj, func_type="kernel", device="cpu"):
         else:
             lines += [f + "\n"]
 
+    # Post-processing: replace wp::load() with wp::load_nc() for loads from read-only arrays.
+    # This uses the non-coherent texture cache (__ldg) which provides higher bandwidth for
+    # scattered reads on CUDA devices. Only safe for arrays not written to in this kernel.
+    if device == "cuda" and func_type == "kernel":
+        # Build set of read-only array arg variable names
+        readonly_args = set()
+        for arg in adj.args:
+            if is_array(arg.type) and not arg.is_write:
+                readonly_args.add(f"var_{arg.label}")
+
+        if readonly_args:
+            # Build mapping: variable name -> source array arg (trace through address calls)
+            # Pattern: var_N = wp::address(var_x, var_idx);  →  var_N is from var_x
+            # Then:    var_M = wp::load(var_N);  →  if var_x is readonly, use load_nc
+            import re
+            ref_to_array = {}
+            processed_lines = []
+            address_pattern = re.compile(r'(var_\d+)\s*=\s*wp::address\((\w+),')
+            load_pattern = re.compile(r'(var_\d+)\s*=\s*wp::load\((var_\d+)\)')
+
+            for line in lines:
+                # Track address calls to build ref→array mapping
+                m = address_pattern.search(line)
+                if m:
+                    ref_var = m.group(1)
+                    src_array = m.group(2)
+                    if src_array in readonly_args:
+                        ref_to_array[ref_var] = src_array
+
+                # Replace load() with load_nc() for refs from readonly arrays
+                m = load_pattern.search(line)
+                if m and m.group(2) in ref_to_array:
+                    line = line.replace("wp::load(", "wp::load_nc(", 1)
+
+                processed_lines.append(line)
+
+            lines = processed_lines
+
     return "".join(l.lstrip() if l.lstrip().startswith("#line") else indent_block + l for l in lines)
 
 
@@ -4686,8 +4712,10 @@ def codegen_func(adj, c_func_name: str, device="cpu", options=None, forward_only
         )
 
     if not adj.skip_reverse_codegen and not forward_only:
+        emit_reverse = False
         if adj.custom_reverse_mode:
             reverse_body = "\t// user-defined adjoint code\n" + forward_body
+            emit_reverse = True
         else:
             # Generate adjoint code if:
             # - enable_backward is True and the function is used by a backward kernel, OR
@@ -4700,18 +4728,21 @@ def codegen_func(adj, c_func_name: str, device="cpu", options=None, forward_only
             should_generate_adjoint = should_generate_adjoint and not adj.uses_grad_call
             if should_generate_adjoint:
                 reverse_body = codegen_func_reverse(adj, func_type="function", device=device)
-            else:
-                reverse_body = '\t// reverse mode disabled (module option "enable_backward" is False or no dependent kernel found with "enable_backward")\n'
-        s += reverse_template.format(
-            name=c_func_name,
-            return_type=return_type,
-            reverse_args=indent(reverse_args),
-            forward_body=forward_body,
-            reverse_body=reverse_body,
-            filename=adj.filename,
-            lineno=adj.fun_lineno,
-            line_directive=func_line_directive,
-        )
+                emit_reverse = True
+            # else: skip generating the empty adjoint function stub entirely —
+            # reduces generated code size and NVRTC compilation time
+
+        if emit_reverse:
+            s += reverse_template.format(
+                name=c_func_name,
+                return_type=return_type,
+                reverse_args=indent(reverse_args),
+                forward_body=forward_body,
+                reverse_body=reverse_body,
+                filename=adj.filename,
+                lineno=adj.fun_lineno,
+                line_directive=func_line_directive,
+            )
 
     return s
 
